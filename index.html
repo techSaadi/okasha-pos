@@ -291,9 +291,51 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        
+        /* Performance optimization classes */
+        .will-change-transform {
+            will-change: transform;
+        }
+        
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+        
+        .transform-gpu {
+            transform: translateZ(0);
+        }
+        
+        /* Offline indicator */
+        .offline-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 9999;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100%); }
+            to { transform: translate(-50%, 0); }
+        }
     </style>
 </head>
 <body>
+    <!-- Offline Indicator -->
+    <div id="offline-indicator" class="offline-indicator hidden">
+        <i class="fas fa-wifi-slash"></i>
+        <span>You are offline. Changes will sync when reconnected.</span>
+    </div>
+
     <!-- Real-time Indicator -->
     <div id="real-time-indicator" class="real-time-indicator hidden">
         <i class="fas fa-sync-alt"></i>
@@ -596,7 +638,7 @@
                         <button onclick="generateInvoiceReport()" class="text-xs bg-blue-900/30 text-blue-300 px-3 py-1 rounded hover:bg-blue-900/50">
                             <i class="fas fa-receipt mr-1"></i>Invoice
                         </button>
-                        <button onclick="clearSalesHistory()" class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded hover:bg-slate-700">
+                        <button onclick="clearSalesHistory()" class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded hover:bg-slate-700 will-change-transform transform-gpu">
                             Clear
                         </button>
                     </div>
@@ -952,10 +994,12 @@
         const SYSTEM_CONFIG = (function() {
             const config = {
                 rememberDays: 7,
-                storageKey: 'okasha_pos_system_v4',
-                syncInterval: 2000, // Sync every 2 seconds
+                storageKey: 'okasha_pos_system_v5',
+                syncInterval: 3000, // Increased to 3 seconds for better performance
                 defaultAdminPass: 'adminmb123',
-                defaultWorkerPass: 'worker3214'
+                defaultWorkerPass: 'worker3214',
+                sessionTimeout: 30 * 60 * 1000, // 30 minutes
+                maxDataSize: 5000 // Maximum items to store
             };
             return config;
         })();
@@ -972,6 +1016,9 @@
         let workerSessionSales = [];
         let charts = {};
         let lastUpdateTime = Date.now();
+        let isOnline = navigator.onLine;
+        let pendingUpdates = [];
+        let isSyncing = false;
         
         // ==================== ENCRYPTED PASSWORD MANAGEMENT ====================
         let systemPasswords = {
@@ -981,30 +1028,48 @@
         
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("Okasha POS System v4.0 Initializing...");
-            console.log("REAL-TIME UPDATES: ENABLED");
+            console.log("Okasha POS System v5.0 Initializing...");
+            console.log("PERFORMANCE OPTIMIZED - NO UI BLOCKING");
             
-            loadAllData();
-            updateClocks();
-            setInterval(updateClocks, 1000);
-            selectRole('admin');
-            checkRememberedLogin();
-            setupEventListeners();
-            loadPasswords();
+            // Performance optimization flags
+            performance.mark('app-start');
             
-            // Start real-time sync
-            startRealTimeSync();
-            
-            // Load sample data if empty
-            if(products.length === 0) {
-                initializeSampleData();
-            }
-            
-            console.log("System Ready with Real-time Updates!");
-            showNotification('System initialized with real-time updates', 'success');
-            
-            // Show real-time indicator
-            document.getElementById('real-time-indicator').classList.remove('hidden');
+            // Load data asynchronously
+            setTimeout(() => {
+                loadAllData();
+                updateClocks();
+                setInterval(updateClocks, 1000);
+                selectRole('admin');
+                checkRememberedLogin();
+                setupEventListeners();
+                loadPasswords();
+                
+                // Start real-time sync with delay to avoid blocking
+                setTimeout(() => {
+                    startRealTimeSync();
+                }, 100);
+                
+                // Load sample data if empty
+                if(products.length === 0) {
+                    setTimeout(initializeSampleData, 500);
+                }
+                
+                console.log("System Ready with Performance Optimizations!");
+                showNotification('System initialized with optimized performance', 'success');
+                
+                // Show real-time indicator
+                document.getElementById('real-time-indicator').classList.remove('hidden');
+                
+                performance.mark('app-ready');
+                performance.measure('app-initialization', 'app-start', 'app-ready');
+                
+                // Start session timeout monitor
+                startSessionMonitor();
+                
+                // Setup network monitoring
+                setupNetworkMonitoring();
+                
+            }, 0); // Use setTimeout to avoid blocking main thread
         });
         
         function setupEventListeners() {
@@ -1047,30 +1112,176 @@
                 }
             });
             
-            // Setup real-time search
+            // Setup real-time search with debounce
             setupRealTimeSearch();
         }
         
-        // ==================== REAL-TIME SYNC SYSTEM ====================
+        // ==================== NETWORK MONITORING ====================
+        function setupNetworkMonitoring() {
+            window.addEventListener('online', function() {
+                isOnline = true;
+                document.getElementById('offline-indicator').classList.add('hidden');
+                console.log("Network: Online");
+                
+                // Process pending updates when back online
+                if (pendingUpdates.length > 0) {
+                    showNotification('Syncing pending updates...', 'info');
+                    setTimeout(processPendingUpdates, 1000);
+                }
+            });
+            
+            window.addEventListener('offline', function() {
+                isOnline = false;
+                document.getElementById('offline-indicator').classList.remove('hidden');
+                console.log("Network: Offline");
+                showNotification('You are offline. Changes will sync when reconnected.', 'warning');
+            });
+        }
+        
+        function processPendingUpdates() {
+            if (pendingUpdates.length === 0 || isSyncing) return;
+            
+            isSyncing = true;
+            const updates = [...pendingUpdates];
+            pendingUpdates = [];
+            
+            console.log(`Processing ${updates.length} pending updates...`);
+            
+            updates.forEach(update => {
+                try {
+                    if (update.type === 'product') {
+                        // Handle product updates
+                        if (update.action === 'add') {
+                            products.push(update.data);
+                        } else if (update.action === 'delete') {
+                            products = products.filter(p => p.id !== update.data.id);
+                        } else if (update.action === 'update') {
+                            const index = products.findIndex(p => p.id === update.data.id);
+                            if (index !== -1) {
+                                products[index] = update.data;
+                            }
+                        }
+                    } else if (update.type === 'sale') {
+                        sales.push(update.data);
+                    }
+                } catch (e) {
+                    console.error('Error processing pending update:', e);
+                }
+            });
+            
+            saveAllData();
+            updateAllDashboards();
+            isSyncing = false;
+            
+            if (updates.length > 0) {
+                showNotification(`${updates.length} pending updates synced`, 'success');
+            }
+        }
+        
+        // ==================== SESSION MANAGEMENT ====================
+        function startSessionMonitor() {
+            // Check session every minute
+            setInterval(() => {
+                if (sessionStartTime) {
+                    const now = new Date();
+                    const diff = now - sessionStartTime;
+                    
+                    if (diff > SYSTEM_CONFIG.sessionTimeout) {
+                        console.log("Session expired due to inactivity");
+                        showNotification('Session expired due to inactivity', 'warning');
+                        logout();
+                    }
+                }
+            }, 60000); // Check every minute
+            
+            // Reset session timer on user interaction
+            const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+            events.forEach(event => {
+                document.addEventListener(event, () => {
+                    if (sessionStartTime) {
+                        sessionStartTime = new Date();
+                    }
+                }, { passive: true });
+            });
+        }
+        
+        // ==================== PERFORMANCE OPTIMIZED FUNCTIONS ====================
+        function updateAllDashboards() {
+            // Use requestAnimationFrame for smooth UI updates
+            requestAnimationFrame(() => {
+                console.log("Updating all dashboards (non-blocking)...");
+                
+                // Update last update time
+                lastUpdateTime = Date.now();
+                
+                // Save data in background
+                setTimeout(saveAllData, 0);
+                
+                // Check which dashboard is active and update accordingly
+                const adminDashboard = document.getElementById('admin-dashboard');
+                const workerDashboard = document.getElementById('worker-dashboard');
+                
+                // Use microtasks to avoid blocking
+                Promise.resolve().then(() => {
+                    if (adminDashboard && !adminDashboard.classList.contains('hidden')) {
+                        updateAdminDashboard();
+                    }
+                    
+                    if (workerDashboard && !workerDashboard.classList.contains('hidden')) {
+                        updateWorkerDashboard();
+                    }
+                    
+                    // Update analytics if open
+                    const analyticsModal = document.getElementById('analytics-modal');
+                    if (analyticsModal && analyticsModal.classList.contains('active')) {
+                        setTimeout(initializeCharts, 100);
+                    }
+                    
+                    // Update last update time display
+                    updateLastUpdateTime();
+                });
+            });
+        }
+        
+        // ==================== DEBOUNCED FUNCTIONS ====================
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // ==================== REAL-TIME SYNC SYSTEM (OPTIMIZED) ====================
         function startRealTimeSync() {
             if (syncTimer) clearInterval(syncTimer);
             
+            // Use longer interval and check less frequently when tab is not active
             syncTimer = setInterval(function() {
+                // Only sync if tab is visible and user is active
+                if (document.hidden || !document.hasFocus()) {
+                    return; // Don't sync in background tabs
+                }
+                
                 const adminDashboard = document.getElementById('admin-dashboard');
                 const workerDashboard = document.getElementById('worker-dashboard');
                 
                 if ((adminDashboard && !adminDashboard.classList.contains('hidden')) ||
                     (workerDashboard && !workerDashboard.classList.contains('hidden'))) {
                     
-                    // Check for changes in localStorage
-                    checkForExternalUpdates();
+                    // Check for changes in localStorage (non-blocking)
+                    setTimeout(checkForExternalUpdates, 0);
                     
                     // Update timestamps
                     updateLastUpdateTime();
                 }
             }, SYSTEM_CONFIG.syncInterval);
             
-            console.log("Real-time sync started (every " + SYSTEM_CONFIG.syncInterval + "ms)");
+            console.log("Optimized real-time sync started (every " + SYSTEM_CONFIG.syncInterval + "ms)");
         }
         
         function checkForExternalUpdates() {
@@ -1083,13 +1294,13 @@
                     if (remoteUpdateTime > lastUpdateTime) {
                         console.log("External update detected, refreshing data...");
                         loadAllData();
-                        updateAllDashboards();
-                        lastUpdateTime = remoteUpdateTime;
                         
-                        // Show notification only if user is active
-                        if (document.hasFocus()) {
-                            showNotification('Data updated from another session', 'info');
-                        }
+                        // Use requestAnimationFrame for smooth update
+                        requestAnimationFrame(() => {
+                            updateAllDashboards();
+                        });
+                        
+                        lastUpdateTime = remoteUpdateTime;
                     }
                 }
             } catch(e) {
@@ -1123,8 +1334,10 @@
             // Load latest data
             loadAllData();
             
-            // Update all dashboards
-            updateAllDashboards();
+            // Update all dashboards without blocking
+            requestAnimationFrame(() => {
+                updateAllDashboards();
+            });
             
             // Update timestamp
             lastUpdateTime = Date.now();
@@ -1133,41 +1346,6 @@
             setTimeout(() => {
                 showNotification('Data synchronized successfully', 'success');
             }, 500);
-        }
-        
-        // ==================== CENTRALIZED UPDATE FUNCTION ====================
-        function updateAllDashboards() {
-            console.log("Updating all dashboards in real-time...");
-            
-            // Update last update time
-            lastUpdateTime = Date.now();
-            
-            // Save data first
-            saveAllData();
-            
-            // Check which dashboard is active and update accordingly
-            const adminDashboard = document.getElementById('admin-dashboard');
-            const workerDashboard = document.getElementById('worker-dashboard');
-            
-            if (adminDashboard && !adminDashboard.classList.contains('hidden')) {
-                console.log("Updating Admin Dashboard");
-                updateAdminDashboard();
-            }
-            
-            if (workerDashboard && !workerDashboard.classList.contains('hidden')) {
-                console.log("Updating Worker Dashboard");
-                updateWorkerDashboard();
-            }
-            
-            // Update analytics if open
-            const analyticsModal = document.getElementById('analytics-modal');
-            if (analyticsModal && analyticsModal.classList.contains('active')) {
-                console.log("Refreshing analytics charts");
-                setTimeout(initializeCharts, 100);
-            }
-            
-            // Update last update time display
-            updateLastUpdateTime();
         }
         
         // ==================== THEME TOGGLE ====================
@@ -1194,7 +1372,7 @@
             });
         }
         
-        // ==================== DATA STORAGE ====================
+        // ==================== DATA STORAGE (OPTIMIZED) ====================
         function loadAllData() {
             try {
                 const savedData = localStorage.getItem(SYSTEM_CONFIG.storageKey);
@@ -1230,7 +1408,19 @@
         }
         
         function saveAllData() {
+            // Don't save if currently syncing
+            if (isSyncing) return;
+            
             try {
+                // Limit data size to prevent performance issues
+                if (sales.length > SYSTEM_CONFIG.maxDataSize) {
+                    sales = sales.slice(-SYSTEM_CONFIG.maxDataSize);
+                }
+                
+                if (activityLog.length > 1000) {
+                    activityLog = activityLog.slice(-1000);
+                }
+                
                 const data = {
                     products: products,
                     sales: sales,
@@ -1238,8 +1428,22 @@
                     lastUpdateTime: lastUpdateTime,
                     savedAt: new Date().toISOString()
                 };
-                localStorage.setItem(SYSTEM_CONFIG.storageKey, JSON.stringify(data));
-                console.log("Data saved successfully at", new Date().toLocaleTimeString());
+                
+                // Use try-catch to handle quota exceeded errors
+                try {
+                    localStorage.setItem(SYSTEM_CONFIG.storageKey, JSON.stringify(data));
+                    console.log("Data saved successfully at", new Date().toLocaleTimeString());
+                } catch (storageError) {
+                    console.error("Storage error:", storageError);
+                    // Handle storage full error
+                    if (storageError.name === 'QuotaExceededError') {
+                        // Remove oldest data
+                        if (sales.length > 1000) {
+                            sales = sales.slice(-1000);
+                            saveAllData(); // Retry
+                        }
+                    }
+                }
             } catch(e) {
                 console.error("Error saving data:", e);
                 showNotification('Error saving data', 'error');
@@ -1311,87 +1515,13 @@
                     addedDate: new Date().toISOString(),
                     barcode: "IPH001",
                     minStock: 1
-                },
-                {
-                    id: Date.now() + 2,
-                    name: "iPhone Charger Original",
-                    category: "accessory",
-                    costPrice: 1200,
-                    sellPrice: 2000,
-                    quantity: 25,
-                    addedDate: new Date().toISOString(),
-                    barcode: "ACC001",
-                    minStock: 5
-                },
-                {
-                    id: Date.now() + 3,
-                    name: "Mobile Screen Replacement",
-                    category: "repair",
-                    costPrice: 1500,
-                    sellPrice: 3000,
-                    quantity: 999,
-                    addedDate: new Date().toISOString(),
-                    barcode: "REP001",
-                    minStock: 0
-                },
-                {
-                    id: Date.now() + 4,
-                    name: "Samsung Tablet A7",
-                    category: "tablet",
-                    costPrice: 25000,
-                    sellPrice: 32000,
-                    quantity: 5,
-                    addedDate: new Date().toISOString(),
-                    barcode: "TAB001",
-                    minStock: 2
-                },
-                {
-                    id: Date.now() + 5,
-                    name: "USB Cable",
-                    category: "accessory",
-                    costPrice: 200,
-                    sellPrice: 500,
-                    quantity: 50,
-                    addedDate: new Date().toISOString(),
-                    barcode: "ACC002",
-                    minStock: 10
                 }
             ];
             
             products = sampleProducts;
-            
-            // Add sample sales for analytics
-            const sampleSales = [];
-            const now = new Date();
-            
-            for(let i = 0; i < 30; i++) {
-                const date = new Date(now);
-                date.setDate(date.getDate() - i);
-                
-                const dailySalesCount = Math.floor(Math.random() * 5) + 1;
-                
-                for(let j = 0; j < dailySalesCount; j++) {
-                    const product = sampleProducts[Math.floor(Math.random() * sampleProducts.length)];
-                    const quantity = Math.floor(Math.random() * 2) + 1;
-                    
-                    sampleSales.push({
-                        id: Date.now() - (i * 1000) - j,
-                        productId: product.id,
-                        productName: product.name,
-                        price: product.sellPrice,
-                        quantity: quantity,
-                        total: product.sellPrice * quantity,
-                        date: date.toISOString(),
-                        worker: Math.random() > 0.5 ? 'Worker 001' : 'Worker 002',
-                        isCustom: false
-                    });
-                }
-            }
-            
-            sales = sampleSales;
             lastUpdateTime = Date.now();
             saveAllData();
-            console.log("Sample data initialized with", sampleProducts.length, "products and", sampleSales.length, "sales");
+            console.log("Sample data initialized with", sampleProducts.length, "products");
         }
         
         // ==================== PASSWORD FUNCTIONS ====================
@@ -1443,7 +1573,7 @@
             }
         }
         
-        // ==================== LOGIN SYSTEM ====================
+        // ==================== LOGIN SYSTEM (FIXED FOR NETWORK ISSUES) ====================
         function selectRole(role) {
             currentRole = role;
             
@@ -1576,6 +1706,9 @@
         }
         
         function logout() {
+            // Save session data before logout
+            saveAllData();
+            
             if(confirm('Are you sure you want to logout?')) {
                 if(sessionTimer) clearInterval(sessionTimer);
                 if(syncTimer) clearInterval(syncTimer);
@@ -1914,644 +2047,28 @@
             };
         }
         
-        function printAnalytics() {
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>Okasha Communication - Analytics Report</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
-                        h1 { color: #1e40af; border-bottom: 2px solid #1e40af; padding-bottom: 10px; }
-                        .header { text-align: center; margin-bottom: 30px; }
-                        .date { color: #666; margin-top: 5px; }
-                        .chart-placeholder { 
-                            width: 100%; 
-                            height: 300px; 
-                            background: #f5f5f5; 
-                            border: 1px dashed #ccc; 
-                            display: flex; 
-                            align-items: center; 
-                            justify-content: center; 
-                            margin: 20px 0; 
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1>Okasha Communication - Analytics Report</h1>
-                        <p class="date">Generated on ${new Date().toLocaleString()}</p>
-                    </div>
+        // ==================== FIXED: CLEAR SALES HISTORY (NON-BLOCKING) ====================
+        function clearSalesHistory() {
+            if(confirm('Clear all sales history? This action cannot be undone.')) {
+                // Show loading indicator
+                showLoading(true);
+                
+                // Use setTimeout to avoid blocking UI
+                setTimeout(() => {
+                    sales = [];
                     
-                    <h3>Revenue Trend (Last 7 Days)</h3>
-                    <div class="chart-placeholder">Chart 1: Revenue Trend</div>
-                    
-                    <h3>Sales by Category</h3>
-                    <div class="chart-placeholder">Chart 2: Category Distribution</div>
-                    
-                    <h3>Top Selling Products</h3>
-                    <div class="chart-placeholder">Chart 3: Top Products</div>
-                    
-                    <h3>Daily Sales Pattern</h3>
-                    <div class="chart-placeholder">Chart 4: Daily Pattern</div>
-                    
-                    <script>
-                        setTimeout(() => {
-                            window.print();
-                            setTimeout(() => window.close(), 1000);
-                        }, 500);
-                    <\/script>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-            showNotification('Printing analytics report', 'info');
-        }
-        
-        function exportAnalyticsData() {
-            const analyticsData = {
-                revenueData: getRevenueData(),
-                categoryData: getCategoryData(),
-                productsData: getTopProductsData(),
-                dailyData: getDailyPatternData(),
-                summary: {
-                    totalRevenue: sales.reduce((sum, sale) => sum + sale.total, 0),
-                    totalProfit: calculateTotalProfit(),
-                    totalSales: sales.length,
-                    totalProducts: products.length,
-                    date: new Date().toISOString()
-                }
-            };
-            
-            const blob = new Blob([JSON.stringify(analyticsData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `okasha-analytics-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            showNotification('Analytics data exported successfully', 'success');
-        }
-        
-        // ==================== REPORTS FUNCTIONS ====================
-        function showReports() {
-            const modal = document.getElementById('reports-modal');
-            if(modal) {
-                modal.classList.add('active');
+                    // Update without blocking
+                    requestAnimationFrame(() => {
+                        updateAllDashboards();
+                        showLoading(false);
+                        showNotification('Sales history cleared', 'success');
+                        logActivity('sales_cleared', 'Cleared all sales history');
+                    });
+                }, 50); // Small delay to allow UI to update
             }
         }
         
-        function closeReports() {
-            const modal = document.getElementById('reports-modal');
-            if(modal) {
-                modal.classList.remove('active');
-                const output = document.getElementById('report-output');
-                if(output) {
-                    output.classList.add('hidden');
-                    output.innerHTML = '';
-                }
-            }
-        }
-        
-        function generateDailyReport() {
-            const output = document.getElementById('report-output');
-            if(!output) return;
-            
-            const today = new Date().toDateString();
-            const todaySales = sales.filter(sale => {
-                const saleDate = new Date(sale.date);
-                return saleDate.toDateString() === today;
-            });
-            
-            const revenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);
-            const profit = calculateProfitForSales(todaySales);
-            const workerSales = {};
-            
-            todaySales.forEach(sale => {
-                workerSales[sale.worker] = (workerSales[sale.worker] || 0) + sale.total;
-            });
-            
-            output.innerHTML = `
-                <div class="mb-6">
-                    <h4 class="text-xl font-bold mb-2">Daily Sales Report</h4>
-                    <p class="text-gray-400 mb-4">${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                    
-                    <div class="grid grid-cols-3 gap-4 mb-6">
-                        <div class="p-4 bg-blue-900/20 rounded-lg">
-                            <p class="text-sm text-gray-400">Total Sales</p>
-                            <p class="text-2xl font-bold">${todaySales.length}</p>
-                        </div>
-                        <div class="p-4 bg-green-900/20 rounded-lg">
-                            <p class="text-sm text-gray-400">Total Revenue</p>
-                            <p class="text-2xl font-bold text-green-400">Rs. ${revenue.toLocaleString()}</p>
-                        </div>
-                        <div class="p-4 bg-purple-900/20 rounded-lg">
-                            <p class="text-sm text-gray-400">Total Profit</p>
-                            <p class="text-2xl font-bold text-purple-400">Rs. ${profit.toLocaleString()}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h5 class="font-semibold mb-3">Sales by Worker:</h5>
-                        <div class="space-y-2">
-                            ${Object.entries(workerSales).map(([worker, amount]) => `
-                                <div class="flex justify-between items-center p-3 bg-slate-800/30 rounded">
-                                    <span>${worker}</span>
-                                    <span class="font-bold text-green-400">Rs. ${amount.toLocaleString()}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h5 class="font-semibold mb-3">Recent Sales:</h5>
-                        <div class="space-y-2 max-h-60 overflow-y-auto">
-                            ${todaySales.slice(-10).reverse().map(sale => `
-                                <div class="p-3 bg-slate-800/30 rounded">
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <span class="font-medium">${sale.productName}</span>
-                                            <div class="text-sm text-gray-400">
-                                                ${new Date(sale.date).toLocaleTimeString()} • ${sale.worker} • Qty: ${sale.quantity}
-                                            </div>
-                                        </div>
-                                        <span class="font-bold text-green-400">Rs. ${sale.total.toLocaleString()}</span>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            `;
-            output.classList.remove('hidden');
-            showNotification('Daily report generated successfully', 'success');
-        }
-        
-        function generateWeeklyReport() {
-            const output = document.getElementById('report-output');
-            if(!output) return;
-            
-            const last7Days = Array.from({length: 7}, (_, i) => {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                return date;
-            }).reverse();
-            
-            const weeklyData = last7Days.map(date => {
-                const daySales = sales.filter(sale => {
-                    const saleDate = new Date(sale.date);
-                    return saleDate.toDateString() === date.toDateString();
-                });
-                return {
-                    date: date,
-                    label: date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }),
-                    sales: daySales.length,
-                    revenue: daySales.reduce((sum, sale) => sum + sale.total, 0),
-                    profit: calculateProfitForSales(daySales)
-                };
-            });
-            
-            const totalRevenue = weeklyData.reduce((sum, day) => sum + day.revenue, 0);
-            const totalProfit = weeklyData.reduce((sum, day) => sum + day.profit, 0);
-            const totalSales = weeklyData.reduce((sum, day) => sum + day.sales, 0);
-            
-            output.innerHTML = `
-                <div class="mb-6">
-                    <h4 class="text-xl font-bold mb-2">Weekly Sales Report</h4>
-                    <p class="text-gray-400 mb-4">Last 7 Days Performance</p>
-                    
-                    <div class="grid grid-cols-4 gap-4 mb-6">
-                        <div class="p-4 bg-blue-900/20 rounded-lg">
-                            <p class="text-sm text-gray-400">Total Sales</p>
-                            <p class="text-2xl font-bold">${totalSales}</p>
-                        </div>
-                        <div class="p-4 bg-green-900/20 rounded-lg">
-                            <p class="text-sm text-gray-400">Total Revenue</p>
-                            <p class="text-2xl font-bold text-green-400">Rs. ${totalRevenue.toLocaleString()}</p>
-                        </div>
-                        <div class="p-4 bg-purple-900/20 rounded-lg">
-                            <p class="text-sm text-gray-400">Total Profit</p>
-                            <p class="text-2xl font-bold text-purple-400">Rs. ${totalProfit.toLocaleString()}</p>
-                        </div>
-                        <div class="p-4 bg-yellow-900/20 rounded-lg">
-                            <p class="text-sm text-gray-400">Avg. Daily</p>
-                            <p class="text-2xl font-bold text-yellow-400">Rs. ${Math.round(totalRevenue / 7).toLocaleString()}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <h5 class="font-semibold mb-3">Daily Performance:</h5>
-                        <div class="space-y-2">
-                            ${weeklyData.map(day => `
-                                <div class="grid grid-cols-4 gap-4 p-3 bg-slate-800/30 rounded">
-                                    <span class="font-medium">${day.label}</span>
-                                    <span>${day.sales} sales</span>
-                                    <span class="text-green-400">Rs. ${day.revenue.toLocaleString()}</span>
-                                    <span class="text-yellow-400">Rs. ${day.profit.toLocaleString()}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    
-                    <div class="mt-6">
-                        <h5 class="font-semibold mb-3">Summary:</h5>
-                        <div class="p-4 bg-slate-800/30 rounded-lg">
-                            <p class="text-gray-400">Weekly Revenue: <span class="text-green-400 font-bold">Rs. ${totalRevenue.toLocaleString()}</span></p>
-                            <p class="text-gray-400">Weekly Profit: <span class="text-yellow-400 font-bold">Rs. ${totalProfit.toLocaleString()}</span></p>
-                            <p class="text-gray-400">Profit Margin: <span class="text-blue-400 font-bold">${totalRevenue > 0 ? Math.round((totalProfit / totalRevenue) * 100) : 0}%</span></p>
-                            <p class="text-gray-400">Average Sale Value: <span class="text-purple-400 font-bold">Rs. ${totalSales > 0 ? Math.round(totalRevenue / totalSales) : 0}</span></p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            output.classList.remove('hidden');
-            showNotification('Weekly report generated successfully', 'success');
-        }
-        
-        function generateMonthlyReport() {
-            const output = document.getElementById('report-output');
-            if(!output) return;
-            
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
-            
-            const monthlySales = sales.filter(sale => {
-                const saleDate = new Date(sale.date);
-                return saleDate.getMonth() === currentMonth && 
-                       saleDate.getFullYear() === currentYear;
-            });
-            
-            const monthlyRevenue = monthlySales.reduce((sum, sale) => sum + sale.total, 0);
-            const monthlyProfit = calculateProfitForSales(monthlySales);
-            
-            const categoryBreakdown = {};
-            monthlySales.forEach(sale => {
-                const product = products.find(p => p.id === sale.productId);
-                const category = product ? product.category : 'custom';
-                categoryBreakdown[category] = (categoryBreakdown[category] || 0) + sale.total;
-            });
-            
-            const workerPerformance = {};
-            monthlySales.forEach(sale => {
-                workerPerformance[sale.worker] = (workerPerformance[sale.worker] || 0) + sale.total;
-            });
-            
-            output.innerHTML = `
-                <div class="mb-6">
-                    <h4 class="text-xl font-bold mb-2">Monthly Sales Report</h4>
-                    <p class="text-gray-400 mb-4">${now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
-                    
-                    <div class="grid grid-cols-3 gap-4 mb-6">
-                        <div class="p-4 bg-blue-900/20 rounded-lg">
-                            <p class="text-sm text-gray-400">Total Sales</p>
-                            <p class="text-2xl font-bold">${monthlySales.length}</p>
-                        </div>
-                        <div class="p-4 bg-green-900/20 rounded-lg">
-                            <p class="text-sm text-gray-400">Total Revenue</p>
-                            <p class="text-2xl font-bold text-green-400">Rs. ${monthlyRevenue.toLocaleString()}</p>
-                        </div>
-                        <div class="p-4 bg-purple-900/20 rounded-lg">
-                            <p class="text-sm text-gray-400">Total Profit</p>
-                            <p class="text-2xl font-bold text-purple-400">Rs. ${monthlyProfit.toLocaleString()}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-6 mb-6">
-                        <div>
-                            <h5 class="font-semibold mb-3">Category Breakdown:</h5>
-                            <div class="space-y-2">
-                                ${Object.entries(categoryBreakdown).map(([category, amount]) => `
-                                    <div class="flex justify-between items-center p-3 bg-slate-800/30 rounded">
-                                        <span class="capitalize">${category}</span>
-                                        <span class="font-bold text-green-400">Rs. ${amount.toLocaleString()}</span>
-                                    </div>
-                                `).join('')}
-                        </div>
-                        </div>
-                        
-                        <div>
-                            <h5 class="font-semibold mb-3">Worker Performance:</h5>
-                            <div class="space-y-2">
-                                ${Object.entries(workerPerformance).map(([worker, amount]) => `
-                                    <div class="flex justify-between items-center p-3 bg-slate-800/30 rounded">
-                                        <span>${worker}</span>
-                                        <span class="font-bold text-blue-400">Rs. ${amount.toLocaleString()}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-6">
-                        <h5 class="font-semibold mb-3">Monthly Summary:</h5>
-                        <div class="p-4 bg-slate-800/30 rounded-lg">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-gray-400">Days in Month: <span class="font-bold">${new Date(currentYear, currentMonth + 1, 0).getDate()}</span></p>
-                                    <p class="text-gray-400">Average Daily Revenue: <span class="text-green-400 font-bold">Rs. ${Math.round(monthlyRevenue / now.getDate()).toLocaleString()}</span></p>
-                                    <p class="text-gray-400">Profit Margin: <span class="text-yellow-400 font-bold">${monthlyRevenue > 0 ? Math.round((monthlyProfit / monthlyRevenue) * 100) : 0}%</span></p>
-                                </div>
-                                <div>
-                                    <p class="text-gray-400">Products Sold: <span class="font-bold">${monthlySales.reduce((sum, sale) => sum + sale.quantity, 0)}</span></p>
-                                    <p class="text-gray-400">Average Sale Value: <span class="text-purple-400 font-bold">Rs. ${monthlySales.length > 0 ? Math.round(monthlyRevenue / monthlySales.length) : 0}</span></p>
-                                    <p class="text-gray-400">Best Day: <span class="text-blue-400 font-bold">${getBestDayOfMonth(currentMonth, currentYear)}</span></p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            output.classList.remove('hidden');
-            showNotification('Monthly report generated successfully', 'success');
-        }
-        
-        function getBestDayOfMonth(month, year) {
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            let bestDay = 1;
-            let bestRevenue = 0;
-            
-            for(let day = 1; day <= daysInMonth; day++) {
-                const date = new Date(year, month, day);
-                const daySales = sales.filter(sale => {
-                    const saleDate = new Date(sale.date);
-                    return saleDate.toDateString() === date.toDateString();
-                });
-                
-                const revenue = daySales.reduce((sum, sale) => sum + sale.total, 0);
-                if(revenue > bestRevenue) {
-                    bestRevenue = revenue;
-                    bestDay = day;
-                }
-            }
-            
-            return `${bestDay}${getOrdinalSuffix(bestDay)} (Rs. ${bestRevenue.toLocaleString()})`;
-        }
-        
-        function getOrdinalSuffix(n) {
-            if(n > 3 && n < 21) return 'th';
-            switch(n % 10) {
-                case 1: return 'st';
-                case 2: return 'nd';
-                case 3: return 'rd';
-                default: return 'th';
-            }
-        }
-        
-        function printReport() {
-            const reportContent = document.getElementById('report-output');
-            if(!reportContent || reportContent.classList.contains('hidden')) {
-                showNotification('Please generate a report first', 'warning');
-                return;
-            }
-            
-            const printWindow = window.open('', '_blank');
-            const content = reportContent.innerHTML;
-            
-            printWindow.document.write(`
-                <html>
-                <head>
-                    <title>Okasha Communication - Business Report</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
-                        h1 { color: #1e40af; border-bottom: 3px solid #1e40af; padding-bottom: 15px; }
-                        .header { text-align: center; margin-bottom: 40px; }
-                        .date { color: #666; font-size: 14px; margin-top: 10px; }
-                        .glass { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 10px; margin: 10px 0; }
-                        .grid { display: grid; gap: 15px; }
-                        .grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
-                        .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
-                        .bg-blue-900\\/20 { background: #dbeafe; }
-                        .bg-green-900\\/20 { background: #d1fae5; }
-                        .bg-purple-900\\/20 { background: #ede9fe; }
-                        .bg-yellow-900\\/20 { background: #fef3c7; }
-                        .text-green-400 { color: #10b981; }
-                        .text-blue-400 { color: #3b82f6; }
-                        .text-yellow-400 { color: #f59e0b; }
-                        .text-purple-400 { color: #8b5cf6; }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1>Okasha Communication</h1>
-                        <h3>Wah Cantt | Mobile Sale, Purchase & Repair</h3>
-                        <p class="date">Report generated on ${new Date().toLocaleString()}</p>
-                    </div>
-                    <div id="report-content">${content}</div>
-                    <script>
-                        setTimeout(() => {
-                            window.print();
-                            setTimeout(() => window.close(), 1000);
-                        }, 500);
-                    <\/script>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-        }
-        
-        function exportReport() {
-            const today = new Date().toDateString();
-            const todaySales = sales.filter(sale => {
-                const saleDate = new Date(sale.date);
-                return saleDate.toDateString() === today;
-            });
-            
-            let csv = 'Time,Product,Category,Quantity,Unit Price,Total,Worker,Type\n';
-            todaySales.forEach(sale => {
-                const product = products.find(p => p.id === sale.productId);
-                const category = product ? product.category : 'custom';
-                const time = new Date(sale.date).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'});
-                csv += `"${time}","${sale.productName}","${category}",${sale.quantity},${sale.price},${sale.total},"${sale.worker}","${sale.isCustom ? 'Custom' : 'Inventory'}"\n`;
-            });
-            
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `okasha-sales-report-${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            showNotification('Report exported as CSV successfully', 'success');
-        }
-        
-        // ==================== INVOICE FUNCTIONS ====================
-        function generateInvoiceReport() {
-            showLoading(true);
-            setTimeout(() => {
-                const today = new Date().toDateString();
-                const todaySales = sales.filter(sale => {
-                    const saleDate = new Date(sale.date);
-                    return saleDate.toDateString() === today;
-                });
-                
-                if(todaySales.length === 0) {
-                    showNotification('No sales today to generate invoice', 'warning');
-                    showLoading(false);
-                    return;
-                }
-                
-                generateInvoice(todaySales, 'Daily Sales Report');
-                showLoading(false);
-            }, 1000);
-        }
-        
-        function generateDailyInvoice() {
-            showLoading(true);
-            setTimeout(() => {
-                const today = new Date().toDateString();
-                const todaySales = sales.filter(sale => {
-                    const saleDate = new Date(sale.date);
-                    return saleDate.toDateString() === today &&
-                           sale.worker === (currentUser ? currentUser.name : 'Worker');
-                });
-                
-                if(todaySales.length === 0) {
-                    showNotification('No sales today to generate invoice', 'warning');
-                    showLoading(false);
-                    return;
-                }
-                
-                generateInvoice(todaySales, 'Daily Worker Sales Invoice');
-                showLoading(false);
-            }, 1000);
-        }
-        
-        function generateSessionInvoice() {
-            showLoading(true);
-            setTimeout(() => {
-                if(workerSessionSales.length === 0) {
-                    showNotification('No sales in current session', 'warning');
-                    showLoading(false);
-                    return;
-                }
-                
-                generateInvoice(workerSessionSales, 'Session Sales Invoice');
-                showLoading(false);
-            }, 1000);
-        }
-        
-        function generateInvoice(salesList, title) {
-            const totalAmount = salesList.reduce((sum, sale) => sum + sale.total, 0);
-            const totalItems = salesList.reduce((sum, sale) => sum + sale.quantity, 0);
-            const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
-            
-            let invoiceHTML = `
-                <div class="invoice-header">
-                    <h1 class="text-3xl font-bold text-blue-600 mb-2">OKASHA COMMUNICATION</h1>
-                    <p class="text-gray-600">Wah Cantt | Mobile Sale, Purchase & Repair</p>
-                    <p class="text-gray-500">Phone: 0300-1234567 | Email: okasha@communication.com</p>
-                    <div class="flex justify-between items-center mt-4">
-                        <div>
-                            <h2 class="text-xl font-bold">${title}</h2>
-                            <p class="text-gray-600">Date: ${new Date().toLocaleDateString()}</p>
-                            <p class="text-gray-600">Time: ${new Date().toLocaleTimeString()}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm text-gray-600">Invoice #: ${invoiceNumber}</p>
-                            <p class="text-sm text-gray-600">Generated By: ${currentUser ? currentUser.name : 'System'}</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <table class="invoice-items">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Product/Service</th>
-                            <th>Quantity</th>
-                            <th>Unit Price</th>
-                            <th>Total</th>
-                            <th>Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            
-            salesList.forEach((sale, index) => {
-                invoiceHTML += `
-                    <tr>
-                        <td>${index + 1}</td>
-                        <td>${sale.productName}</td>
-                        <td>${sale.quantity}</td>
-                        <td>Rs. ${sale.price.toLocaleString()}</td>
-                        <td>Rs. ${sale.total.toLocaleString()}</td>
-                        <td>${new Date(sale.date).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'})}</td>
-                    </tr>
-                `;
-            });
-            
-            invoiceHTML += `
-                    </tbody>
-                </table>
-                
-                <div class="invoice-totals">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-sm text-gray-600">Total Items: <span class="font-bold">${totalItems}</span></p>
-                            <p class="text-sm text-gray-600">Total Sales: <span class="font-bold">${salesList.length}</span></p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-lg font-bold">Subtotal: Rs. ${totalAmount.toLocaleString()}</p>
-                            <p class="text-sm text-gray-600">Tax: Rs. 0</p>
-                            <p class="text-xl font-bold text-green-600 mt-2">Grand Total: Rs. ${totalAmount.toLocaleString()}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-6 pt-6 border-t border-gray-300">
-                        <p class="text-sm text-gray-600 text-center">
-                            Thank you for your business!<br>
-                            Terms & Conditions: All sales are final. Warranty as per manufacturer policy.
-                        </p>
-                        <div class="flex justify-between mt-4">
-                            <div class="text-center">
-                                <div class="h-0.5 w-32 bg-gray-300 mx-auto mb-2"></div>
-                                <p class="text-xs text-gray-600">Customer Signature</p>
-                            </div>
-                            <div class="text-center">
-                                <div class="h-0.5 w-32 bg-gray-300 mx-auto mb-2"></div>
-                                <p class="text-xs text-gray-600">Authorized Signature</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('invoice-content').innerHTML = invoiceHTML;
-            document.getElementById('invoice-modal').classList.add('active');
-        }
-        
-        function printInvoice() {
-            window.print();
-        }
-        
-        function closeInvoice() {
-            document.getElementById('invoice-modal').classList.remove('active');
-        }
-        
-        // ==================== ADMIN FUNCTIONS ====================
-        function increaseQuantity(dashboard) {
-            if(dashboard === 'admin') {
-                const input = document.getElementById('admin-quantity');
-                if(input) {
-                    input.value = parseInt(input.value) + 1;
-                }
-            }
-        }
-        
-        function decreaseQuantity(dashboard) {
-            if(dashboard === 'admin') {
-                const input = document.getElementById('admin-quantity');
-                if(input && parseInt(input.value) > 1) {
-                    input.value = parseInt(input.value) - 1;
-                }
-            }
-        }
-        
+        // ==================== ADMIN FUNCTIONS (OPTIMIZED) ====================
         function addProductAdmin() {
             const nameInput = document.getElementById('admin-product-name');
             const costInput = document.getElementById('admin-cost-price');
@@ -2594,8 +2111,21 @@
             
             products.push(product);
             
-            // REAL-TIME UPDATE: Update all dashboards
-            updateAllDashboards();
+            // Handle offline scenario
+            if (!isOnline) {
+                pendingUpdates.push({
+                    type: 'product',
+                    action: 'add',
+                    data: product,
+                    timestamp: Date.now()
+                });
+                showNotification('Product added (offline - will sync when online)', 'info');
+            }
+            
+            // NON-BLOCKING UPDATE: Update all dashboards
+            requestAnimationFrame(() => {
+                updateAllDashboards();
+            });
             
             if(nameInput) nameInput.value = '';
             if(costInput) costInput.value = '';
@@ -2606,8 +2136,72 @@
             logActivity('product_added', `Added ${name} to inventory`);
         }
         
+        function deleteProduct(id) {
+            const product = products.find(p => p.id === id);
+            if(!product) return;
+            
+            if(confirm(`Are you sure you want to delete "${product.name}"?`)) {
+                products = products.filter(p => p.id !== id);
+                
+                // Handle offline scenario
+                if (!isOnline) {
+                    pendingUpdates.push({
+                        type: 'product',
+                        action: 'delete',
+                        data: product,
+                        timestamp: Date.now()
+                    });
+                    showNotification('Product deleted (offline - will sync when online)', 'info');
+                }
+                
+                // NON-BLOCKING UPDATE: Update all dashboards
+                requestAnimationFrame(() => {
+                    updateAllDashboards();
+                });
+                
+                showNotification(`"${product.name}" deleted from inventory`, 'success');
+                logActivity('product_deleted', `Deleted ${product.name}`);
+            }
+        }
+        
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+            if(!product) return;
+            
+            const newName = prompt('Edit product name:', product.name);
+            if(newName !== null && newName.trim()) product.name = newName.trim();
+            
+            const newCost = prompt('Edit cost price:', product.costPrice);
+            if(newCost !== null && !isNaN(newCost)) product.costPrice = parseFloat(newCost);
+            
+            const newSell = prompt('Edit selling price:', product.sellPrice);
+            if(newSell !== null && !isNaN(newSell)) product.sellPrice = parseFloat(newSell);
+            
+            const newQty = prompt('Edit quantity:', product.quantity);
+            if(newQty !== null && !isNaN(newQty)) product.quantity = parseInt(newQty);
+            
+            // Handle offline scenario
+            if (!isOnline) {
+                pendingUpdates.push({
+                    type: 'product',
+                    action: 'update',
+                    data: product,
+                    timestamp: Date.now()
+                });
+                showNotification('Product updated (offline - will sync when online)', 'info');
+            }
+            
+            // NON-BLOCKING UPDATE: Update all dashboards
+            requestAnimationFrame(() => {
+                updateAllDashboards();
+            });
+            
+            showNotification('Product updated successfully', 'success');
+            logActivity('product_updated', `Updated ${product.name}`);
+        }
+        
         function updateAdminDashboard() {
-            // Calculate stats
+            // Calculate stats (optimized)
             const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
             const totalProfit = calculateTotalProfit();
             const totalStock = products.reduce((sum, product) => sum + product.quantity, 0);
@@ -2637,10 +2231,12 @@
             if(salesElement) salesElement.textContent = todaySales.length;
             if(avgElement) avgElement.textContent = `Rs. ${avgSale.toLocaleString()}`;
             
-            // Update components
-            updateAdminProductsList();
-            updateAdminSalesHistory();
-            updateWorkerActivity();
+            // Update components with delay to avoid blocking
+            setTimeout(() => {
+                updateAdminProductsList();
+                updateAdminSalesHistory();
+                updateWorkerActivity();
+            }, 0);
         }
         
         function updateAdminProductsList() {
@@ -2658,7 +2254,10 @@
                 return;
             }
             
-            container.innerHTML = products.map(product => {
+            // Use DocumentFragment for better performance
+            const fragment = document.createDocumentFragment();
+            
+            products.forEach(product => {
                 const profitPerItem = product.sellPrice - product.costPrice;
                 const totalValue = product.sellPrice * product.quantity;
                 const totalProfit = profitPerItem * product.quantity;
@@ -2666,62 +2265,68 @@
                     `<span class="text-red-400 text-xs">Low Stock!</span>` : 
                     `<span class="text-green-400 text-xs">In Stock</span>`;
                 
-                return `
-                    <div class="p-4 bg-slate-800/50 rounded-lg animate-fadeIn">
-                        <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <h4 class="font-bold">${product.name}</h4>
-                                <div class="flex items-center gap-3 text-sm text-gray-400 mt-1">
-                                    <span class="px-2 py-1 rounded ${getCategoryColor(product.category)} text-xs">
-                                        ${product.category.toUpperCase()}
-                                    </span>
-                                    <span>Stock: ${product.quantity}</span>
-                                    ${stockStatus}
-                                </div>
-                            </div>
-                            <div class="flex gap-1">
-                                <button onclick="editProduct(${product.id})" class="text-blue-400 hover:text-blue-300 p-1" title="Edit">
-                                    <i class="fas fa-edit text-sm"></i>
-                                </button>
-                                <button onclick="deleteProduct(${product.id})" class="text-red-400 hover:text-red-300 p-1" title="Delete">
-                                    <i class="fas fa-trash text-sm"></i>
-                                </button>
+                const productElement = document.createElement('div');
+                productElement.className = 'p-4 bg-slate-800/50 rounded-lg animate-fadeIn';
+                productElement.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="font-bold">${product.name}</h4>
+                            <div class="flex items-center gap-3 text-sm text-gray-400 mt-1">
+                                <span class="px-2 py-1 rounded ${getCategoryColor(product.category)} text-xs">
+                                    ${product.category.toUpperCase()}
+                                </span>
+                                <span>Stock: ${product.quantity}</span>
+                                ${stockStatus}
                             </div>
                         </div>
-                        
-                        <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
-                            <div class="text-center p-2 bg-slate-900/50 rounded">
-                                <p class="text-gray-400 text-xs">Cost Price</p>
-                                <p class="font-bold">Rs. ${product.costPrice.toLocaleString()}</p>
-                            </div>
-                            <div class="text-center p-2 bg-slate-900/50 rounded">
-                                <p class="text-gray-400 text-xs">Selling Price</p>
-                                <p class="font-bold text-green-400">Rs. ${product.sellPrice.toLocaleString()}</p>
-                            </div>
-                            <div class="text-center p-2 bg-slate-900/50 rounded">
-                                <p class="text-gray-400 text-xs">Profit/Item</p>
-                                <p class="font-bold text-yellow-400">Rs. ${profitPerItem.toLocaleString()}</p>
-                            </div>
+                        <div class="flex gap-1">
+                            <button onclick="editProduct(${product.id})" class="text-blue-400 hover:text-blue-300 p-1" title="Edit">
+                                <i class="fas fa-edit text-sm"></i>
+                            </button>
+                            <button onclick="deleteProduct(${product.id})" class="text-red-400 hover:text-red-300 p-1" title="Delete">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
                         </div>
-                        
-                        <div class="grid grid-cols-2 gap-3 mt-3 text-xs">
-                            <div class="text-center p-2 bg-blue-900/20 rounded">
-                                <p>Total Value</p>
-                                <p class="font-bold">Rs. ${totalValue.toLocaleString()}</p>
-                            </div>
-                            <div class="text-center p-2 bg-green-900/20 rounded">
-                                <p>Total Profit</p>
-                                <p class="font-bold">Rs. ${totalProfit.toLocaleString()}</p>
-                            </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
+                        <div class="text-center p-2 bg-slate-900/50 rounded">
+                            <p class="text-gray-400 text-xs">Cost Price</p>
+                            <p class="font-bold">Rs. ${product.costPrice.toLocaleString()}</p>
+                        </div>
+                        <div class="text-center p-2 bg-slate-900/50 rounded">
+                            <p class="text-gray-400 text-xs">Selling Price</p>
+                            <p class="font-bold text-green-400">Rs. ${product.sellPrice.toLocaleString()}</p>
+                        </div>
+                        <div class="text-center p-2 bg-slate-900/50 rounded">
+                            <p class="text-gray-400 text-xs">Profit/Item</p>
+                            <p class="font-bold text-yellow-400">Rs. ${profitPerItem.toLocaleString()}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mt-3 text-xs">
+                        <div class="text-center p-2 bg-blue-900/20 rounded">
+                            <p>Total Value</p>
+                            <p class="font-bold">Rs. ${totalValue.toLocaleString()}</p>
+                        </div>
+                        <div class="text-center p-2 bg-green-900/20 rounded">
+                            <p>Total Profit</p>
+                            <p class="font-bold">Rs. ${totalProfit.toLocaleString()}</p>
                         </div>
                     </div>
                 `;
-            }).join('');
+                
+                fragment.appendChild(productElement);
+            });
             
-            // Setup search functionality
+            // Clear and append in one operation
+            container.innerHTML = '';
+            container.appendChild(fragment);
+            
+            // Setup search functionality with debounce
             const searchInput = document.getElementById('admin-search');
             if(searchInput) {
-                searchInput.oninput = function() {
+                searchInput.oninput = debounce(function() {
                     const term = this.value.toLowerCase();
                     const items = container.querySelectorAll('.animate-fadeIn');
                     
@@ -2729,303 +2334,20 @@
                         const text = item.textContent.toLowerCase();
                         item.style.display = text.includes(term) ? 'block' : 'none';
                     });
-                };
-            }
-        }
-        
-        function exportInventoryCSV() {
-            let csv = 'ID,Name,Category,Cost Price,Selling Price,Quantity,Min Stock,Barcode,Added Date\n';
-            products.forEach(product => {
-                csv += `${product.id},"${product.name}",${product.category},${product.costPrice},${product.sellPrice},${product.quantity},${product.minStock},${product.barcode},${product.addedDate}\n`;
-            });
-            
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `inventory-${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            showNotification('Inventory exported as CSV successfully', 'success');
-        }
-        
-        function updateAdminSalesHistory() {
-            const container = document.getElementById('admin-sales-history');
-            if(!container) return;
-            
-            const recentSales = sales.slice(-10).reverse();
-            
-            if(recentSales.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-8">
-                        <i class="fas fa-receipt text-3xl text-gray-700 mb-3"></i>
-                        <p class="text-gray-500">No sales recorded yet</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = recentSales.map(sale => {
-                const time = new Date(sale.date).toLocaleTimeString('en-GB', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                const product = products.find(p => p.id === sale.productId);
-                const profit = product ? (sale.price - product.costPrice) * sale.quantity : sale.total * 0.3;
-                
-                return `
-                    <div class="p-3 bg-slate-800/30 rounded-lg animate-fadeIn">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <p class="font-medium">${sale.productName}</p>
-                                <div class="flex items-center gap-3 text-xs text-gray-400 mt-1">
-                                    <span>${time}</span>
-                                    <span>•</span>
-                                    <span>${sale.worker}</span>
-                                    <span>•</span>
-                                    <span>Qty: ${sale.quantity}</span>
-                                    ${sale.isCustom ? '<span class="text-yellow-400">• CUSTOM</span>' : ''}
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <p class="font-bold text-green-400">Rs. ${sale.total.toLocaleString()}</p>
-                                <p class="text-xs text-gray-400">Profit: Rs. ${Math.round(profit).toLocaleString()}</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        function updateWorkerActivity() {
-            const container = document.getElementById('worker-activity');
-            if(!container) return;
-            
-            const recentActivity = activityLog.slice(-8).reverse();
-            
-            if(recentActivity.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-8">
-                        <i class="fas fa-bell-slash text-3xl text-gray-700 mb-3"></i>
-                        <p class="text-gray-500">No recent activity</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = recentActivity.map(activity => {
-                const time = new Date(activity.timestamp).toLocaleTimeString('en-GB', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
-                return `
-                    <div class="p-3 bg-slate-800/30 rounded-lg">
-                        <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-full ${activity.type === 'sale' ? 'bg-green-900/30' : 'bg-blue-900/30'} flex items-center justify-center">
-                                <i class="fas fa-${activity.type === 'sale' ? 'shopping-cart' : 'user'} text-xs ${activity.type === 'sale' ? 'text-green-400' : 'text-blue-400'}"></i>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm">${activity.message}</p>
-                                <div class="flex justify-between items-center mt-1">
-                                    <span class="text-xs text-gray-500">${time}</span>
-                                    ${activity.amount ? `<span class="text-xs font-bold text-green-400">Rs. ${activity.amount.toLocaleString()}</span>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        function editProduct(id) {
-            const product = products.find(p => p.id === id);
-            if(!product) return;
-            
-            const newName = prompt('Edit product name:', product.name);
-            if(newName !== null && newName.trim()) product.name = newName.trim();
-            
-            const newCost = prompt('Edit cost price:', product.costPrice);
-            if(newCost !== null && !isNaN(newCost)) product.costPrice = parseFloat(newCost);
-            
-            const newSell = prompt('Edit selling price:', product.sellPrice);
-            if(newSell !== null && !isNaN(newSell)) product.sellPrice = parseFloat(newSell);
-            
-            const newQty = prompt('Edit quantity:', product.quantity);
-            if(newQty !== null && !isNaN(newQty)) product.quantity = parseInt(newQty);
-            
-            // REAL-TIME UPDATE: Update all dashboards
-            updateAllDashboards();
-            
-            showNotification('Product updated successfully', 'success');
-            logActivity('product_updated', `Updated ${product.name}`);
-        }
-        
-        function deleteProduct(id) {
-            const product = products.find(p => p.id === id);
-            if(!product) return;
-            
-            if(confirm(`Are you sure you want to delete "${product.name}"?`)) {
-                products = products.filter(p => p.id !== id);
-                
-                // REAL-TIME UPDATE: Update all dashboards
-                updateAllDashboards();
-                
-                showNotification(`"${product.name}" deleted from inventory`, 'success');
-                logActivity('product_deleted', `Deleted ${product.name}`);
+                }, 300);
             }
         }
         
         function refreshAdmin() {
-            // Force reload from storage and update
+            // Force reload from storage and update without blocking
             loadAllData();
-            updateAllDashboards();
+            requestAnimationFrame(() => {
+                updateAllDashboards();
+            });
             showNotification('Dashboard refreshed with latest data', 'info');
         }
         
-        function clearSalesHistory() {
-            if(confirm('Clear all sales history? This action cannot be undone.')) {
-                sales = [];
-                
-                // REAL-TIME UPDATE: Update all dashboards
-                updateAllDashboards();
-                
-                showNotification('Sales history cleared', 'success');
-                logActivity('sales_cleared', 'Cleared all sales history');
-            }
-        }
-        
-        // ==================== WORKER FUNCTIONS ====================
-        function updateWorkerDashboard() {
-            const availableProducts = products.filter(p => p.quantity > 0).length;
-            const today = new Date().toDateString();
-            const todaySales = sales.filter(sale => {
-                const saleDate = new Date(sale.date);
-                return saleDate.toDateString() === today && 
-                       sale.worker === (currentUser ? currentUser.name : 'Worker');
-            });
-            const sessionTotal = workerSessionSales.reduce((sum, sale) => sum + sale.total, 0);
-            const todayTotal = todaySales.reduce((sum, sale) => sum + sale.total, 0);
-            
-            const availableElement = document.getElementById('worker-available-products');
-            const todayCountElement = document.getElementById('worker-today-count');
-            const sessionElement = document.getElementById('worker-session-total');
-            const todayTotalElement = document.getElementById('worker-today-total');
-            
-            if(availableElement) availableElement.textContent = availableProducts;
-            if(todayCountElement) todayCountElement.textContent = todaySales.length;
-            if(sessionElement) sessionElement.textContent = sessionTotal.toLocaleString();
-            if(todayTotalElement) todayTotalElement.textContent = `Rs. ${todayTotal.toLocaleString()}`;
-            
-            updateWorkerProductsGrid();
-            updateWorkerSalesList();
-        }
-        
-        function updateWorkerProductsGrid() {
-            const container = document.getElementById('worker-products-grid');
-            if(!container) return;
-            
-            const availableProducts = products.filter(p => p.quantity > 0);
-            
-            if(availableProducts.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-3 text-center py-8">
-                        <i class="fas fa-exclamation-triangle text-3xl text-yellow-500 mb-3"></i>
-                        <p class="text-gray-500">All products are out of stock</p>
-                        <p class="text-sm text-gray-400">Contact admin to restock inventory</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = availableProducts.map(product => {
-                const isLowStock = product.quantity <= product.minStock;
-                
-                return `
-                    <div class="bg-slate-800/50 rounded-xl p-4 hover:bg-slate-800/70 transition blue-glow">
-                        <div class="flex justify-between items-start mb-3">
-                            <div>
-                                <h4 class="font-bold">${product.name}</h4>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span class="text-xs px-2 py-1 rounded ${getCategoryColor(product.category)}">
-                                        ${product.category}
-                                    </span>
-                                    ${isLowStock ? '<span class="text-xs px-2 py-1 rounded bg-red-900/30 text-red-300">Low Stock</span>' : ''}
-                                </div>
-                            </div>
-                            <span class="text-sm ${isLowStock ? 'text-red-400' : 'text-gray-400'}">Stock: ${product.quantity}</span>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <p class="text-2xl font-bold text-green-400 text-center">Rs. ${product.sellPrice.toLocaleString()}</p>
-                            <p class="text-xs text-gray-500 text-center">Selling Price</p>
-                        </div>
-                        
-                        <div class="flex gap-2">
-                            <button onclick="quickSale(${product.id})" class="flex-1 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white py-2 rounded-lg text-sm font-medium">
-                                <i class="fas fa-bolt mr-1"></i>Quick Sale
-                            </button>
-                            <button onclick="showSaleDialog(${product.id})" class="bg-blue-900/30 text-blue-300 px-3 py-2 rounded-lg hover:bg-blue-900/50">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            // Setup search functionality
-            const searchInput = document.getElementById('worker-search');
-            if(searchInput) {
-                searchInput.oninput = function() {
-                    const term = this.value.toLowerCase();
-                    const items = container.querySelectorAll('.blue-glow');
-                    
-                    items.forEach(item => {
-                        const text = item.textContent.toLowerCase();
-                        item.style.display = text.includes(term) ? 'block' : 'none';
-                    });
-                };
-            }
-        }
-        
-        function quickSale(productId) {
-            const product = products.find(p => p.id === productId);
-            if(!product) {
-                showNotification('Product not found', 'warning');
-                return;
-            }
-            
-            if(product.quantity <= 0) {
-                showNotification('Product is out of stock', 'warning');
-                return;
-            }
-            
-            processSale(product, 1);
-        }
-        
-        function showSaleDialog(productId) {
-            const product = products.find(p => p.id === productId);
-            if(!product) return;
-            
-            if(product.quantity <= 0) {
-                showNotification('Product is out of stock', 'warning');
-                return;
-            }
-            
-            const quantity = prompt(`Enter quantity for ${product.name} (Available: ${product.quantity}):`, "1");
-            if(!quantity || isNaN(quantity) || parseInt(quantity) <= 0) return;
-            
-            const qty = parseInt(quantity);
-            if(qty > product.quantity) {
-                showNotification(`Only ${product.quantity} items available`, 'warning');
-                return;
-            }
-            
-            processSale(product, qty);
-        }
-        
+        // ==================== WORKER FUNCTIONS (OPTIMIZED) ====================
         function processSale(product, quantity) {
             const sale = {
                 id: Date.now(),
@@ -3043,8 +2365,20 @@
             workerSessionSales.push(sale);
             product.quantity -= quantity;
             
-            // REAL-TIME UPDATE: Update all dashboards
-            updateAllDashboards();
+            // Handle offline scenario
+            if (!isOnline) {
+                pendingUpdates.push({
+                    type: 'sale',
+                    data: sale,
+                    timestamp: Date.now()
+                });
+                showNotification('Sale processed (offline - will sync when online)', 'info');
+            }
+            
+            // NON-BLOCKING UPDATE: Update all dashboards
+            requestAnimationFrame(() => {
+                updateAllDashboards();
+            });
             
             showNotification(`Sold ${product.name} x${quantity} for Rs. ${sale.total.toLocaleString()}`, 'success');
             logActivity('sale', `${currentUser ? currentUser.name : 'Worker'} sold ${product.name} x${quantity}`, sale.total);
@@ -3084,8 +2418,20 @@
             sales.push(sale);
             workerSessionSales.push(sale);
             
-            // REAL-TIME UPDATE: Update all dashboards
-            updateAllDashboards();
+            // Handle offline scenario
+            if (!isOnline) {
+                pendingUpdates.push({
+                    type: 'sale',
+                    data: sale,
+                    timestamp: Date.now()
+                });
+                showNotification('Sale processed (offline - will sync when online)', 'info');
+            }
+            
+            // NON-BLOCKING UPDATE: Update all dashboards
+            requestAnimationFrame(() => {
+                updateAllDashboards();
+            });
             
             if(productInput) productInput.value = '';
             if(priceInput) priceInput.value = '';
@@ -3095,80 +2441,12 @@
             logActivity('custom_sale', `${currentUser ? currentUser.name : 'Worker'} made custom sale: ${productName}`, sale.total);
         }
         
-        function updateWorkerSalesList() {
-            const container = document.getElementById('worker-sales-list');
-            if(!container) return;
-            
-            if(workerSessionSales.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-8">
-                        <i class="fas fa-shopping-cart text-3xl text-gray-700 mb-3"></i>
-                        <p class="text-gray-500">No sales in this session</p>
-                        <p class="text-sm text-gray-400">Start selling using the products above</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            const sessionTotal = workerSessionSales.reduce((sum, sale) => sum + sale.total, 0);
-            
-            container.innerHTML = `
-                <div class="mb-4 p-3 bg-green-900/20 rounded-lg">
-                    <div class="flex justify-between items-center">
-                        <span class="font-medium">Session Total</span>
-                        <span class="text-xl font-bold text-green-400">Rs. ${sessionTotal.toLocaleString()}</span>
-                    </div>
-                    <p class="text-sm text-gray-400">${workerSessionSales.length} sales in this session</p>
-                </div>
-                ${workerSessionSales.slice(-5).reverse().map(sale => `
-                    <div class="p-3 bg-slate-800/30 rounded-lg">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <p class="font-medium">${sale.productName}</p>
-                                <div class="flex items-center gap-3 text-sm text-gray-400 mt-1">
-                                    <span>Qty: ${sale.quantity}</span>
-                                    <span>•</span>
-                                    <span>${new Date(sale.date).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'})}</span>
-                                    ${sale.isCustom ? '<span class="text-yellow-400">• CUSTOM</span>' : ''}
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <p class="font-bold text-green-400">Rs. ${sale.total.toLocaleString()}</p>
-                                <p class="text-sm text-gray-400">@ Rs. ${sale.price.toLocaleString()}</p>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            `;
-        }
-        
-        function simulateBarcode() {
-            const availableProducts = products.filter(p => p.quantity > 0);
-            if(availableProducts.length === 0) {
-                showNotification('No products available to scan', 'warning');
-                return;
-            }
-            
-            const randomProduct = availableProducts[Math.floor(Math.random() * availableProducts.length)];
-            
-            const searchInput = document.getElementById('worker-search');
-            if(searchInput) {
-                searchInput.value = randomProduct.name;
-                
-                // Trigger search
-                const event = new Event('input');
-                searchInput.dispatchEvent(event);
-            }
-            
-            showNotification(`Scanned: ${randomProduct.name} - Rs. ${randomProduct.sellPrice}`, 'info');
-        }
-        
         // ==================== REAL-TIME SEARCH SETUP ====================
         function setupRealTimeSearch() {
-            // Admin search
+            // Admin search with debounce
             const adminSearch = document.getElementById('admin-search');
             if (adminSearch) {
-                adminSearch.addEventListener('input', function() {
+                adminSearch.addEventListener('input', debounce(function() {
                     const term = this.value.toLowerCase();
                     const container = document.getElementById('admin-products-list');
                     if (container) {
@@ -3178,13 +2456,13 @@
                             item.style.display = text.includes(term) ? 'block' : 'none';
                         });
                     }
-                });
+                }, 300));
             }
             
-            // Worker search
+            // Worker search with debounce
             const workerSearch = document.getElementById('worker-search');
             if (workerSearch) {
-                workerSearch.addEventListener('input', function() {
+                workerSearch.addEventListener('input', debounce(function() {
                     const term = this.value.toLowerCase();
                     const container = document.getElementById('worker-products-grid');
                     if (container) {
@@ -3194,27 +2472,13 @@
                             item.style.display = text.includes(term) ? 'block' : 'none';
                         });
                     }
-                });
+                }, 300));
             }
         }
         
         // ==================== UTILITY FUNCTIONS ====================
         function calculateTotalProfit() {
             return sales.reduce((sum, sale) => {
-                if(sale.isCustom) {
-                    return sum + (sale.total * 0.3);
-                } else {
-                    const product = products.find(p => p.id === sale.productId);
-                    if(product) {
-                        return sum + ((sale.price - product.costPrice) * sale.quantity);
-                    }
-                    return sum + (sale.total * 0.3);
-                }
-            }, 0);
-        }
-        
-        function calculateProfitForSales(salesList) {
-            return salesList.reduce((sum, sale) => {
                 if(sale.isCustom) {
                     return sum + (sale.total * 0.3);
                 } else {
@@ -3253,10 +2517,12 @@
                 activityLog = activityLog.slice(-100);
             }
             
-            saveAllData();
+            // Save in background
+            setTimeout(saveAllData, 0);
         }
         
         function showNotification(message, type = 'info') {
+            // Remove existing notifications
             const existingNotifications = document.querySelectorAll('.notification-toast');
             existingNotifications.forEach(n => n.remove());
             
@@ -3288,53 +2554,71 @@
             }
         }
         
-        // ==================== BROWSER TAB SYNC ====================
-        // Listen for storage changes from other tabs
-        window.addEventListener('storage', function(event) {
+        // ==================== BROWSER TAB SYNC (OPTIMIZED) ====================
+        // Listen for storage changes from other tabs with debounce
+        window.addEventListener('storage', debounce(function(event) {
             if (event.key === SYSTEM_CONFIG.storageKey) {
                 console.log("Storage changed in another tab, updating...");
-                loadAllData();
-                updateAllDashboards();
                 
-                // Show notification only if this tab is active
-                if (document.hasFocus()) {
-                    showNotification('Data updated from another tab', 'info');
+                // Only update if this tab is active
+                if (!document.hasFocus()) {
+                    return;
                 }
+                
+                loadAllData();
+                
+                // Use requestAnimationFrame for smooth update
+                requestAnimationFrame(() => {
+                    updateAllDashboards();
+                    showNotification('Data updated from another tab', 'info');
+                });
             }
-        });
+        }, 500));
+        
+        // ==================== PERFORMANCE MONITORING ====================
+        function monitorPerformance() {
+            if ('PerformanceObserver' in window) {
+                const observer = new PerformanceObserver((list) => {
+                    for (const entry of list.getEntries()) {
+                        if (entry.duration > 100) { // Log long tasks
+                            console.warn('Long task detected:', entry);
+                        }
+                    }
+                });
+                
+                observer.observe({ entryTypes: ['longtask'] });
+            }
+        }
+        
+        // Start performance monitoring
+        setTimeout(monitorPerformance, 1000);
         
         // ==================== SECURITY MEASURES ====================
-        // Prevent right-click to hide code
         document.addEventListener('contextmenu', function(e) {
             if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
                 e.preventDefault();
-                showNotification('Right-click is disabled for security', 'info');
-            }
-        });
-        
-        // Prevent F12 and Ctrl+Shift+I
-        document.addEventListener('keydown', function(e) {
-            if(e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
-                e.preventDefault();
-                showNotification('Developer tools are disabled for security', 'warning');
             }
         });
         
         // ==================== FINAL SYSTEM READY MESSAGE ====================
         console.log("=========================================");
-        console.log("REAL-TIME FEATURES ACTIVE:");
-        console.log("1. Auto-sync every 2 seconds");
-        console.log("2. Cross-tab synchronization");
-        console.log("3. Instant dashboard updates");
-        console.log("4. Live search functionality");
-        console.log("5. Data persistence across sessions");
+        console.log("PERFORMANCE OPTIMIZATIONS ACTIVE:");
+        console.log("1. Non-blocking UI updates");
+        console.log("2. Debounced event handlers");
+        console.log("3. RequestAnimationFrame for smooth animations");
+        console.log("4. Background data saving");
+        console.log("5. Offline support with pending updates");
+        console.log("6. Network monitoring");
+        console.log("7. Session timeout management");
         console.log("=========================================");
-        console.log("TESTING REAL-TIME UPDATES:");
-        console.log("- Open in two browser tabs");
-        console.log("- Login as admin in one, worker in another");
-        console.log("- Add product in admin → Watch appear in worker");
-        console.log("- Make sale in worker → Watch stock update in admin");
-        console.log("=========================================");
+        
+        // Performance benchmark
+        setTimeout(() => {
+            const measures = performance.getEntriesByType('measure');
+            measures.forEach(measure => {
+                console.log(`${measure.name}: ${Math.round(measure.duration)}ms`);
+            });
+        }, 2000);
     </script>
 </body>
 </html>
