@@ -255,13 +255,8 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Hide code from view source */
-        .secure-data {
-            display: none;
-        }
-        
-        /* Real-time update indicator */
-        .real-time-indicator {
+        /* Real-time sync indicator */
+        .sync-indicator {
             position: fixed;
             bottom: 20px;
             right: 20px;
@@ -274,51 +269,22 @@
             align-items: center;
             gap: 8px;
             z-index: 99;
-            animation: pulse 2s infinite;
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        
-        /* Data sync animation */
-        .syncing {
-            animation: syncing 1s linear infinite;
-        }
-        
-        @keyframes syncing {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Performance optimization classes */
-        .will-change-transform {
-            will-change: transform;
-        }
-        
-        .backface-hidden {
-            backface-visibility: hidden;
-        }
-        
-        .transform-gpu {
-            transform: translateZ(0);
-        }
-        
-        /* Offline indicator */
-        .offline-indicator {
+        /* Update notification */
+        .update-notification {
             position: fixed;
             top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(239, 68, 68, 0.9);
+            background: rgba(59, 130, 246, 0.9);
             color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             z-index: 9999;
             animation: slideDown 0.3s ease-out;
         }
@@ -330,16 +296,16 @@
     </style>
 </head>
 <body>
-    <!-- Offline Indicator -->
-    <div id="offline-indicator" class="offline-indicator hidden">
-        <i class="fas fa-wifi-slash"></i>
-        <span>You are offline. Changes will sync when reconnected.</span>
+    <!-- Update Notification -->
+    <div id="update-notification" class="update-notification hidden">
+        <i class="fas fa-sync-alt"></i>
+        <span>Data updated in real-time</span>
     </div>
 
-    <!-- Real-time Indicator -->
-    <div id="real-time-indicator" class="real-time-indicator hidden">
-        <i class="fas fa-sync-alt"></i>
-        <span>Real-time Active</span>
+    <!-- Sync Indicator -->
+    <div id="sync-indicator" class="sync-indicator">
+        <i class="fas fa-circle text-green-400 text-xs"></i>
+        <span>Real-time Sync Active</span>
     </div>
 
     <!-- Theme Toggle Button -->
@@ -406,7 +372,7 @@
                 
                 <div class="flex items-center">
                     <input type="checkbox" id="remember-me" class="mr-2 rounded bg-slate-800 border-slate-700 text-blue-500">
-                    <label for="remember-me" class="text-sm text-gray-400">Remember me (7 days)</label>
+                    <label for="remember-me" class="text-sm text-gray-400">Remember me (30 days)</label>
                 </div>
                 
                 <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center gap-2">
@@ -455,9 +421,6 @@
                     </button>
                     <button onclick="showPasswordManager()" class="px-3 py-1 bg-yellow-900/30 text-yellow-300 rounded-full text-xs font-medium hover:bg-yellow-900/50">
                         <i class="fas fa-key mr-1"></i> Passwords
-                    </button>
-                    <button onclick="forceSync()" class="px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full text-xs font-medium hover:bg-indigo-900/50">
-                        <i class="fas fa-sync-alt mr-1"></i> Sync Now
                     </button>
                     <button onclick="logout()" class="px-3 py-1 bg-red-900/30 text-red-300 rounded-full text-xs font-medium hover:bg-red-900/50">
                         <i class="fas fa-sign-out-alt mr-1"></i> Logout
@@ -614,9 +577,6 @@
                         <button onclick="refreshAdmin()" class="bg-blue-900/30 text-blue-300 p-2 rounded-lg hover:bg-blue-900/50">
                             <i class="fas fa-sync-alt"></i>
                         </button>
-                        <button onclick="exportInventoryCSV()" class="bg-green-900/30 text-green-300 p-2 rounded-lg hover:bg-green-900/50">
-                            <i class="fas fa-download"></i>
-                        </button>
                     </div>
                 </div>
                 <div id="admin-products-list" class="space-y-3 max-h-[400px] overflow-y-auto">
@@ -638,7 +598,7 @@
                         <button onclick="generateInvoiceReport()" class="text-xs bg-blue-900/30 text-blue-300 px-3 py-1 rounded hover:bg-blue-900/50">
                             <i class="fas fa-receipt mr-1"></i>Invoice
                         </button>
-                        <button onclick="clearSalesHistory()" class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded hover:bg-slate-700 will-change-transform transform-gpu">
+                        <button onclick="clearSalesHistory()" class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded hover:bg-slate-700">
                             Clear
                         </button>
                     </div>
@@ -689,9 +649,6 @@
                     </span>
                     <button onclick="generateDailyInvoice()" class="px-3 py-1 bg-yellow-900/30 text-yellow-300 rounded-full text-xs font-medium hover:bg-yellow-900/50">
                         <i class="fas fa-receipt mr-1"></i> Daily Invoice
-                    </button>
-                    <button onclick="forceSync()" class="px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full text-xs font-medium hover:bg-indigo-900/50">
-                        <i class="fas fa-sync-alt mr-1"></i> Sync Now
                     </button>
                     <button onclick="logout()" class="px-3 py-1 bg-red-900/30 text-red-300 rounded-full text-xs font-medium hover:bg-red-900/50">
                         <i class="fas fa-sign-out-alt mr-1"></i> Logout
@@ -854,9 +811,6 @@
                 <button onclick="printAnalytics()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg hover:bg-blue-900/50">
                     <i class="fas fa-print mr-2"></i>Print Charts
                 </button>
-                <button onclick="exportAnalyticsData()" class="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg hover:bg-green-900/50">
-                    <i class="fas fa-download mr-2"></i>Export Data
-                </button>
             </div>
         </div>
     </div>
@@ -894,15 +848,6 @@
                 
                 <div id="report-output" class="hidden glass p-6 rounded-2xl">
                     <!-- Report content will be generated here -->
-                </div>
-                
-                <div class="flex justify-end gap-3">
-                    <button onclick="printReport()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg hover:bg-blue-900/50">
-                        <i class="fas fa-print mr-2"></i>Print Report
-                    </button>
-                    <button onclick="exportReport()" class="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg hover:bg-green-900/50">
-                        <i class="fas fa-download mr-2"></i>Export CSV
-                    </button>
                 </div>
             </div>
         </div>
@@ -976,35 +921,17 @@
         </div>
     </div>
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-        <div class="glass p-8 rounded-3xl flex flex-col items-center">
-            <div class="spinner mb-4"></div>
-            <p class="text-gray-400">Processing...</p>
-        </div>
-    </div>
-
-    <!-- Secure Data (Hidden from source view) -->
-    <div class="secure-data" id="secure-data">
-        <!-- All sensitive data and functions are encrypted and secured -->
-    </div>
-
     <script>
-        // ==================== ENCRYPTED SYSTEM CONFIGURATION ====================
-        const SYSTEM_CONFIG = (function() {
-            const config = {
-                rememberDays: 7,
-                storageKey: 'okasha_pos_system_v5',
-                syncInterval: 3000, // Increased to 3 seconds for better performance
-                defaultAdminPass: 'adminmb123',
-                defaultWorkerPass: 'worker3214',
-                sessionTimeout: 30 * 60 * 1000, // 30 minutes
-                maxDataSize: 5000 // Maximum items to store
-            };
-            return config;
-        })();
+        // ==================== SYSTEM CONFIGURATION ====================
+        const SYSTEM_CONFIG = {
+            storageKey: 'okasha_pos_v1',
+            sessionKey: 'okasha_session',
+            defaultAdminPass: 'adminmb123',
+            defaultWorkerPass: 'worker3214',
+            sessionTimeout: 24 * 60 * 60 * 1000 // 24 hours
+        };
         
-        // ==================== SECURE GLOBAL VARIABLES ====================
+        // ==================== GLOBAL VARIABLES ====================
         let products = [];
         let sales = [];
         let activityLog = [];
@@ -1012,15 +939,11 @@
         let currentRole = 'admin';
         let sessionStartTime = null;
         let sessionTimer = null;
-        let syncTimer = null;
         let workerSessionSales = [];
         let charts = {};
         let lastUpdateTime = Date.now();
-        let isOnline = navigator.onLine;
-        let pendingUpdates = [];
-        let isSyncing = false;
         
-        // ==================== ENCRYPTED PASSWORD MANAGEMENT ====================
+        // ==================== PASSWORD MANAGEMENT ====================
         let systemPasswords = {
             admin: SYSTEM_CONFIG.defaultAdminPass,
             worker: SYSTEM_CONFIG.defaultWorkerPass
@@ -1028,67 +951,35 @@
         
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("Okasha POS System v5.0 Initializing...");
-            console.log("PERFORMANCE OPTIMIZED - NO UI BLOCKING");
+            console.log("Okasha POS System Initializing...");
             
-            // Performance optimization flags
-            performance.mark('app-start');
+            // Load data
+            loadAllData();
+            loadPasswords();
             
-            // Load data asynchronously
-            setTimeout(() => {
-                loadAllData();
-                updateClocks();
-                setInterval(updateClocks, 1000);
-                selectRole('admin');
-                checkRememberedLogin();
-                setupEventListeners();
-                loadPasswords();
-                
-                // Start real-time sync with delay to avoid blocking
-                setTimeout(() => {
-                    startRealTimeSync();
-                }, 100);
-                
-                // Load sample data if empty
-                if(products.length === 0) {
-                    setTimeout(initializeSampleData, 500);
-                }
-                
-                console.log("System Ready with Performance Optimizations!");
-                showNotification('System initialized with optimized performance', 'success');
-                
-                // Show real-time indicator
-                document.getElementById('real-time-indicator').classList.remove('hidden');
-                
-                performance.mark('app-ready');
-                performance.measure('app-initialization', 'app-start', 'app-ready');
-                
-                // Start session timeout monitor
-                startSessionMonitor();
-                
-                // Setup network monitoring
-                setupNetworkMonitoring();
-                
-            }, 0); // Use setTimeout to avoid blocking main thread
+            // Setup clocks
+            updateClocks();
+            setInterval(updateClocks, 1000);
+            
+            // Check for existing session
+            checkExistingSession();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Setup theme
+            setupTheme();
+            
+            console.log("System Ready!");
         });
         
         function setupEventListeners() {
-            // Login form submission
+            // Login form
             const loginForm = document.getElementById('login-form');
             if(loginForm) {
                 loginForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     handleLogin();
-                });
-            }
-            
-            // Password field enter key
-            const passwordField = document.getElementById('password');
-            if(passwordField) {
-                passwordField.addEventListener('keypress', function(e) {
-                    if(e.key === 'Enter') {
-                        handleLogin();
-                    }
                 });
             }
             
@@ -1098,257 +989,54 @@
                 themeToggle.addEventListener('click', toggleTheme);
             }
             
-            // Initialize with saved theme
-            const savedTheme = localStorage.getItem('okasha_theme');
-            if(savedTheme === 'light') {
-                document.body.classList.add('light-mode');
-                themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
-            }
-            
-            // Close modals on escape key
+            // Close modals on escape
             document.addEventListener('keydown', function(e) {
                 if(e.key === 'Escape') {
                     closeAllModals();
                 }
             });
             
-            // Setup real-time search with debounce
+            // Setup real-time search
             setupRealTimeSearch();
-        }
-        
-        // ==================== NETWORK MONITORING ====================
-        function setupNetworkMonitoring() {
-            window.addEventListener('online', function() {
-                isOnline = true;
-                document.getElementById('offline-indicator').classList.add('hidden');
-                console.log("Network: Online");
-                
-                // Process pending updates when back online
-                if (pendingUpdates.length > 0) {
-                    showNotification('Syncing pending updates...', 'info');
-                    setTimeout(processPendingUpdates, 1000);
+            
+            // Listen for storage changes (cross-tab sync)
+            window.addEventListener('storage', function(e) {
+                if(e.key === SYSTEM_CONFIG.storageKey) {
+                    console.log("Data changed in another tab, updating...");
+                    loadAllData();
+                    updateAllDashboards();
+                    showUpdateNotification();
                 }
             });
             
-            window.addEventListener('offline', function() {
-                isOnline = false;
-                document.getElementById('offline-indicator').classList.remove('hidden');
-                console.log("Network: Offline");
-                showNotification('You are offline. Changes will sync when reconnected.', 'warning');
-            });
-        }
-        
-        function processPendingUpdates() {
-            if (pendingUpdates.length === 0 || isSyncing) return;
-            
-            isSyncing = true;
-            const updates = [...pendingUpdates];
-            pendingUpdates = [];
-            
-            console.log(`Processing ${updates.length} pending updates...`);
-            
-            updates.forEach(update => {
-                try {
-                    if (update.type === 'product') {
-                        // Handle product updates
-                        if (update.action === 'add') {
-                            products.push(update.data);
-                        } else if (update.action === 'delete') {
-                            products = products.filter(p => p.id !== update.data.id);
-                        } else if (update.action === 'update') {
-                            const index = products.findIndex(p => p.id === update.data.id);
-                            if (index !== -1) {
-                                products[index] = update.data;
-                            }
-                        }
-                    } else if (update.type === 'sale') {
-                        sales.push(update.data);
-                    }
-                } catch (e) {
-                    console.error('Error processing pending update:', e);
-                }
+            // Auto-save on beforeunload
+            window.addEventListener('beforeunload', function() {
+                saveAllData();
             });
             
-            saveAllData();
-            updateAllDashboards();
-            isSyncing = false;
-            
-            if (updates.length > 0) {
-                showNotification(`${updates.length} pending updates synced`, 'success');
-            }
-        }
-        
-        // ==================== SESSION MANAGEMENT ====================
-        function startSessionMonitor() {
-            // Check session every minute
-            setInterval(() => {
-                if (sessionStartTime) {
-                    const now = new Date();
-                    const diff = now - sessionStartTime;
-                    
-                    if (diff > SYSTEM_CONFIG.sessionTimeout) {
-                        console.log("Session expired due to inactivity");
-                        showNotification('Session expired due to inactivity', 'warning');
-                        logout();
-                    }
-                }
-            }, 60000); // Check every minute
-            
-            // Reset session timer on user interaction
-            const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-            events.forEach(event => {
-                document.addEventListener(event, () => {
-                    if (sessionStartTime) {
-                        sessionStartTime = new Date();
-                    }
-                }, { passive: true });
-            });
-        }
-        
-        // ==================== PERFORMANCE OPTIMIZED FUNCTIONS ====================
-        function updateAllDashboards() {
-            // Use requestAnimationFrame for smooth UI updates
-            requestAnimationFrame(() => {
-                console.log("Updating all dashboards (non-blocking)...");
-                
-                // Update last update time
-                lastUpdateTime = Date.now();
-                
-                // Save data in background
-                setTimeout(saveAllData, 0);
-                
-                // Check which dashboard is active and update accordingly
+            // Auto-refresh data every 5 seconds
+            setInterval(function() {
                 const adminDashboard = document.getElementById('admin-dashboard');
                 const workerDashboard = document.getElementById('worker-dashboard');
                 
-                // Use microtasks to avoid blocking
-                Promise.resolve().then(() => {
-                    if (adminDashboard && !adminDashboard.classList.contains('hidden')) {
-                        updateAdminDashboard();
-                    }
-                    
-                    if (workerDashboard && !workerDashboard.classList.contains('hidden')) {
-                        updateWorkerDashboard();
-                    }
-                    
-                    // Update analytics if open
-                    const analyticsModal = document.getElementById('analytics-modal');
-                    if (analyticsModal && analyticsModal.classList.contains('active')) {
-                        setTimeout(initializeCharts, 100);
-                    }
-                    
-                    // Update last update time display
-                    updateLastUpdateTime();
-                });
-            });
+                if((adminDashboard && !adminDashboard.classList.contains('hidden')) ||
+                   (workerDashboard && !workerDashboard.classList.contains('hidden'))) {
+                    loadAllData();
+                    updateAllDashboards();
+                }
+            }, 5000);
         }
         
-        // ==================== DEBOUNCED FUNCTIONS ====================
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
-        
-        // ==================== REAL-TIME SYNC SYSTEM (OPTIMIZED) ====================
-        function startRealTimeSync() {
-            if (syncTimer) clearInterval(syncTimer);
+        function setupTheme() {
+            const savedTheme = localStorage.getItem('okasha_theme');
+            const themeToggle = document.getElementById('theme-toggle');
             
-            // Use longer interval and check less frequently when tab is not active
-            syncTimer = setInterval(function() {
-                // Only sync if tab is visible and user is active
-                if (document.hidden || !document.hasFocus()) {
-                    return; // Don't sync in background tabs
-                }
-                
-                const adminDashboard = document.getElementById('admin-dashboard');
-                const workerDashboard = document.getElementById('worker-dashboard');
-                
-                if ((adminDashboard && !adminDashboard.classList.contains('hidden')) ||
-                    (workerDashboard && !workerDashboard.classList.contains('hidden'))) {
-                    
-                    // Check for changes in localStorage (non-blocking)
-                    setTimeout(checkForExternalUpdates, 0);
-                    
-                    // Update timestamps
-                    updateLastUpdateTime();
-                }
-            }, SYSTEM_CONFIG.syncInterval);
-            
-            console.log("Optimized real-time sync started (every " + SYSTEM_CONFIG.syncInterval + "ms)");
-        }
-        
-        function checkForExternalUpdates() {
-            try {
-                const savedData = localStorage.getItem(SYSTEM_CONFIG.storageKey);
-                if (savedData) {
-                    const data = JSON.parse(savedData);
-                    const remoteUpdateTime = data.lastUpdateTime || 0;
-                    
-                    if (remoteUpdateTime > lastUpdateTime) {
-                        console.log("External update detected, refreshing data...");
-                        loadAllData();
-                        
-                        // Use requestAnimationFrame for smooth update
-                        requestAnimationFrame(() => {
-                            updateAllDashboards();
-                        });
-                        
-                        lastUpdateTime = remoteUpdateTime;
-                    }
-                }
-            } catch(e) {
-                console.error("Error checking for external updates:", e);
+            if(savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
             }
         }
         
-        function updateLastUpdateTime() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('en-GB', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            
-            const lastUpdateElement = document.getElementById('last-update');
-            const workerLastUpdateElement = document.getElementById('worker-last-update');
-            
-            if (lastUpdateElement) {
-                lastUpdateElement.textContent = `Updated: ${timeStr}`;
-            }
-            if (workerLastUpdateElement) {
-                workerLastUpdateElement.textContent = `Updated: ${timeStr}`;
-            }
-        }
-        
-        function forceSync() {
-            console.log("Manual sync triggered");
-            showNotification('Synchronizing data...', 'info');
-            
-            // Load latest data
-            loadAllData();
-            
-            // Update all dashboards without blocking
-            requestAnimationFrame(() => {
-                updateAllDashboards();
-            });
-            
-            // Update timestamp
-            lastUpdateTime = Date.now();
-            
-            // Show success
-            setTimeout(() => {
-                showNotification('Data synchronized successfully', 'success');
-            }, 500);
-        }
-        
-        // ==================== THEME TOGGLE ====================
         function toggleTheme() {
             const body = document.body;
             const themeToggle = document.getElementById('theme-toggle');
@@ -1372,7 +1060,17 @@
             });
         }
         
-        // ==================== DATA STORAGE (OPTIMIZED) ====================
+        function showUpdateNotification() {
+            const notification = document.getElementById('update-notification');
+            if(notification) {
+                notification.classList.remove('hidden');
+                setTimeout(() => {
+                    notification.classList.add('hidden');
+                }, 3000);
+            }
+        }
+        
+        // ==================== DATA STORAGE ====================
         function loadAllData() {
             try {
                 const savedData = localStorage.getItem(SYSTEM_CONFIG.storageKey);
@@ -1382,71 +1080,32 @@
                     sales = data.sales || [];
                     activityLog = data.activityLog || [];
                     
-                    // Get last update time from storage
-                    lastUpdateTime = data.lastUpdateTime || Date.now();
-                    
-                    console.log("Data loaded from storage:", {
+                    console.log("Data loaded:", {
                         products: products.length,
                         sales: sales.length,
-                        activityLog: activityLog.length,
-                        lastUpdate: new Date(lastUpdateTime).toLocaleTimeString()
+                        activityLog: activityLog.length
                     });
-                } else {
-                    console.log("No saved data found, initializing new");
-                    products = [];
-                    sales = [];
-                    activityLog = [];
-                    lastUpdateTime = Date.now();
                 }
             } catch(e) {
                 console.error("Error loading data:", e);
                 products = [];
                 sales = [];
                 activityLog = [];
-                lastUpdateTime = Date.now();
             }
         }
         
         function saveAllData() {
-            // Don't save if currently syncing
-            if (isSyncing) return;
-            
             try {
-                // Limit data size to prevent performance issues
-                if (sales.length > SYSTEM_CONFIG.maxDataSize) {
-                    sales = sales.slice(-SYSTEM_CONFIG.maxDataSize);
-                }
-                
-                if (activityLog.length > 1000) {
-                    activityLog = activityLog.slice(-1000);
-                }
-                
                 const data = {
                     products: products,
                     sales: sales,
                     activityLog: activityLog,
-                    lastUpdateTime: lastUpdateTime,
-                    savedAt: new Date().toISOString()
+                    lastUpdated: new Date().toISOString()
                 };
-                
-                // Use try-catch to handle quota exceeded errors
-                try {
-                    localStorage.setItem(SYSTEM_CONFIG.storageKey, JSON.stringify(data));
-                    console.log("Data saved successfully at", new Date().toLocaleTimeString());
-                } catch (storageError) {
-                    console.error("Storage error:", storageError);
-                    // Handle storage full error
-                    if (storageError.name === 'QuotaExceededError') {
-                        // Remove oldest data
-                        if (sales.length > 1000) {
-                            sales = sales.slice(-1000);
-                            saveAllData(); // Retry
-                        }
-                    }
-                }
+                localStorage.setItem(SYSTEM_CONFIG.storageKey, JSON.stringify(data));
+                console.log("Data saved");
             } catch(e) {
                 console.error("Error saving data:", e);
-                showNotification('Error saving data', 'error');
             }
         }
         
@@ -1455,7 +1114,6 @@
                 const savedPasswords = localStorage.getItem('okasha_passwords');
                 if(savedPasswords) {
                     systemPasswords = JSON.parse(savedPasswords);
-                    console.log("Passwords loaded from storage");
                 }
             } catch(e) {
                 console.error("Error loading passwords:", e);
@@ -1470,110 +1128,85 @@
                 if(adminPass && adminPass.length >= 4) {
                     systemPasswords.admin = adminPass;
                 } else {
-                    showNotification('Admin password must be at least 4 characters', 'warning');
+                    alert('Admin password must be at least 4 characters');
                     return;
                 }
                 
                 if(workerPass && workerPass.length >= 4) {
                     systemPasswords.worker = workerPass;
                 } else {
-                    showNotification('Worker password must be at least 4 characters', 'warning');
+                    alert('Worker password must be at least 4 characters');
                     return;
                 }
                 
                 localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
-                showNotification('Passwords updated successfully', 'success');
+                alert('Passwords updated successfully');
                 closePasswordManager();
             } catch(e) {
                 console.error("Error saving passwords:", e);
-                showNotification('Error saving passwords', 'error');
+                alert('Error saving passwords');
             }
         }
         
-        function initializeSampleData() {
-            console.log("Initializing sample data...");
-            
-            const sampleProducts = [
-                {
-                    id: Date.now(),
-                    name: "Samsung Galaxy A14",
-                    category: "mobile",
-                    costPrice: 32000,
-                    sellPrice: 38000,
-                    quantity: 8,
-                    addedDate: new Date().toISOString(),
-                    barcode: "SAM001",
-                    minStock: 2
-                },
-                {
-                    id: Date.now() + 1,
-                    name: "iPhone 13 Pro",
-                    category: "mobile",
-                    costPrice: 180000,
-                    sellPrice: 210000,
-                    quantity: 3,
-                    addedDate: new Date().toISOString(),
-                    barcode: "IPH001",
-                    minStock: 1
+        // ==================== SESSION MANAGEMENT ====================
+        function checkExistingSession() {
+            try {
+                const sessionData = localStorage.getItem(SYSTEM_CONFIG.sessionKey);
+                if(sessionData) {
+                    const session = JSON.parse(sessionData);
+                    
+                    // Check if session is still valid
+                    if(Date.now() < session.expiry) {
+                        console.log("Existing session found");
+                        currentUser = session.user;
+                        currentRole = session.user.role;
+                        sessionStartTime = new Date(session.loginTime);
+                        
+                        // Show appropriate dashboard
+                        const loginScreen = document.getElementById('login-screen');
+                        if(loginScreen) loginScreen.classList.add('hidden');
+                        
+                        if(currentRole === 'admin') {
+                            const adminDashboard = document.getElementById('admin-dashboard');
+                            if(adminDashboard) {
+                                adminDashboard.classList.remove('hidden');
+                                updateAdminDashboard();
+                            }
+                        } else {
+                            const workerDashboard = document.getElementById('worker-dashboard');
+                            if(workerDashboard) {
+                                workerDashboard.classList.remove('hidden');
+                                updateWorkerDashboard();
+                            }
+                        }
+                        
+                        startSessionTimer();
+                    } else {
+                        // Session expired, clear it
+                        localStorage.removeItem(SYSTEM_CONFIG.sessionKey);
+                    }
                 }
-            ];
-            
-            products = sampleProducts;
-            lastUpdateTime = Date.now();
-            saveAllData();
-            console.log("Sample data initialized with", sampleProducts.length, "products");
-        }
-        
-        // ==================== PASSWORD FUNCTIONS ====================
-        function showPasswordManager() {
-            const modal = document.getElementById('password-modal');
-            if(modal) {
-                modal.classList.add('active');
-                document.getElementById('admin-password-field').value = systemPasswords.admin;
-                document.getElementById('worker-password-field').value = systemPasswords.worker;
+            } catch(e) {
+                console.error("Error checking session:", e);
             }
         }
         
-        function closePasswordManager() {
-            const modal = document.getElementById('password-modal');
-            if(modal) {
-                modal.classList.remove('active');
+        function saveSession() {
+            if(currentUser) {
+                const session = {
+                    user: currentUser,
+                    loginTime: sessionStartTime,
+                    expiry: Date.now() + SYSTEM_CONFIG.sessionTimeout
+                };
+                localStorage.setItem(SYSTEM_CONFIG.sessionKey, JSON.stringify(session));
             }
         }
         
-        function toggleAdminPassword() {
-            const input = document.getElementById('admin-password-field');
-            const icon = document.getElementById('admin-password-toggle');
-            togglePasswordVisibility(input, icon);
+        function clearSession() {
+            localStorage.removeItem(SYSTEM_CONFIG.sessionKey);
         }
         
-        function toggleWorkerPassword() {
-            const input = document.getElementById('worker-password-field');
-            const icon = document.getElementById('worker-password-toggle');
-            togglePasswordVisibility(input, icon);
-        }
-        
-        function togglePassword() {
-            const input = document.getElementById('password');
-            const icon = document.getElementById('password-toggle');
-            togglePasswordVisibility(input, icon);
-        }
-        
-        function togglePasswordVisibility(input, icon) {
-            if(input && icon) {
-                if(input.type === 'password') {
-                    input.type = 'text';
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
-                } else {
-                    input.type = 'password';
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                }
-            }
-        }
-        
-        // ==================== LOGIN SYSTEM (FIXED FOR NETWORK ISSUES) ====================
+        // ==================== LOGIN SYSTEM ====================
         function selectRole(role) {
             currentRole = role;
             
@@ -1602,23 +1235,6 @@
             }
         }
         
-        function checkRememberedLogin() {
-            try {
-                const remembered = localStorage.getItem('okasha_remembered_login');
-                if(remembered) {
-                    const data = JSON.parse(remembered);
-                    if(Date.now() < data.expiry) {
-                        console.log("Auto-login found");
-                        selectRole(data.role);
-                        document.getElementById('password').value = data.password;
-                        document.getElementById('remember-me').checked = true;
-                    }
-                }
-            } catch(e) {
-                console.error("Error checking remembered login:", e);
-            }
-        }
-        
         function handleLogin() {
             const passwordInput = document.getElementById('password');
             const password = passwordInput ? passwordInput.value.trim() : '';
@@ -1640,23 +1256,12 @@
                 currentUser = {
                     role: currentRole,
                     name: currentRole === 'admin' ? 'Administrator' : 'Worker ' + Math.floor(Math.random() * 1000).toString().padStart(3, '0'),
-                    loginTime: new Date(),
-                    sessionId: Date.now()
+                    loginTime: new Date()
                 };
-                
-                if(rememberMe) {
-                    const expiry = Date.now() + (SYSTEM_CONFIG.rememberDays * 24 * 60 * 60 * 1000);
-                    localStorage.setItem('okasha_remembered_login', JSON.stringify({
-                        role: currentRole,
-                        password: password,
-                        expiry: expiry
-                    }));
-                } else {
-                    localStorage.removeItem('okasha_remembered_login');
-                }
                 
                 sessionStartTime = new Date();
                 startSessionTimer();
+                saveSession();
                 
                 const loginScreen = document.getElementById('login-screen');
                 if(loginScreen) {
@@ -1667,28 +1272,26 @@
                     const adminDashboard = document.getElementById('admin-dashboard');
                     if(adminDashboard) {
                         adminDashboard.classList.remove('hidden');
-                        
-                        // Load latest data
-                        loadAllData();
                         updateAdminDashboard();
-                        
-                        showNotification('Welcome Admin! Real-time dashboard loaded.', 'success');
                     }
                 } else {
                     const workerDashboard = document.getElementById('worker-dashboard');
                     if(workerDashboard) {
                         workerDashboard.classList.remove('hidden');
                         workerSessionSales = [];
-                        
-                        // Load latest data
-                        loadAllData();
                         updateWorkerDashboard();
-                        
-                        showNotification('Welcome Worker! Ready for real-time sales.', 'success');
                     }
                 }
                 
                 logActivity('login', `${currentRole} logged in`);
+                
+                // Save remember me
+                if(rememberMe) {
+                    localStorage.setItem('okasha_remembered_login', JSON.stringify({
+                        role: currentRole,
+                        expiry: Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 days
+                    }));
+                }
                 
             } else {
                 if(errorDiv) {
@@ -1706,14 +1309,11 @@
         }
         
         function logout() {
-            // Save session data before logout
-            saveAllData();
-            
             if(confirm('Are you sure you want to logout?')) {
                 if(sessionTimer) clearInterval(sessionTimer);
-                if(syncTimer) clearInterval(syncTimer);
                 
                 logActivity('logout', `${currentRole} logged out`);
+                clearSession();
                 
                 currentUser = null;
                 workerSessionSales = [];
@@ -1729,11 +1329,6 @@
                     const passwordInput = document.getElementById('password');
                     if(passwordInput) passwordInput.value = '';
                 }
-                
-                // Hide real-time indicator
-                document.getElementById('real-time-indicator').classList.add('hidden');
-                
-                showNotification('Logged out successfully', 'info');
             }
         }
         
@@ -1787,288 +1382,72 @@
                 workerDate.textContent = dateStr;
                 workerTime.textContent = timeStr;
             }
+            
+            // Update last update time
+            updateLastUpdateTime();
         }
         
-        // ==================== ANALYTICS FUNCTIONS ====================
-        function showAnalytics() {
-            const modal = document.getElementById('analytics-modal');
-            if(modal) {
-                modal.classList.add('active');
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-GB', { 
+                hour: '2-digit', 
+                minute: '2-digit'
+            });
+            
+            const lastUpdateElement = document.getElementById('last-update');
+            const workerLastUpdateElement = document.getElementById('worker-last-update');
+            
+            if (lastUpdateElement) {
+                lastUpdateElement.textContent = `Updated: ${timeStr}`;
+            }
+            if (workerLastUpdateElement) {
+                workerLastUpdateElement.textContent = `Updated: ${timeStr}`;
+            }
+        }
+        
+        // ==================== CENTRALIZED UPDATE FUNCTION ====================
+        function updateAllDashboards() {
+            // Save data first
+            saveAllData();
+            
+            // Update both dashboards
+            const adminDashboard = document.getElementById('admin-dashboard');
+            const workerDashboard = document.getElementById('worker-dashboard');
+            
+            if (adminDashboard && !adminDashboard.classList.contains('hidden')) {
+                updateAdminDashboard();
+            }
+            
+            if (workerDashboard && !workerDashboard.classList.contains('hidden')) {
+                updateWorkerDashboard();
+            }
+            
+            // Update analytics if open
+            const analyticsModal = document.getElementById('analytics-modal');
+            if (analyticsModal && analyticsModal.classList.contains('active')) {
                 setTimeout(initializeCharts, 100);
             }
         }
         
-        function closeAnalytics() {
-            const modal = document.getElementById('analytics-modal');
-            if(modal) {
-                modal.classList.remove('active');
-                Object.values(charts).forEach(chart => {
-                    if(chart) chart.destroy();
-                });
-                charts = {};
-            }
-        }
-        
-        function initializeCharts() {
-            console.log("Initializing analytics charts...");
-            
-            // Revenue Chart
-            const revenueCtx = document.getElementById('revenueChart');
-            if(revenueCtx) {
-                const revenueData = getRevenueData();
-                charts.revenue = new Chart(revenueCtx, {
-                    type: 'line',
-                    data: {
-                        labels: revenueData.labels,
-                        datasets: [{
-                            label: 'Daily Revenue (Rs.)',
-                            data: revenueData.values,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: getChartOptions('Revenue Trend (Last 7 Days)')
-                });
-            }
-            
-            // Category Chart
-            const categoryCtx = document.getElementById('categoryChart');
-            if(categoryCtx) {
-                const categoryData = getCategoryData();
-                charts.category = new Chart(categoryCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: categoryData.labels,
-                        datasets: [{
-                            data: categoryData.values,
-                            backgroundColor: [
-                                '#3b82f6',
-                                '#10b981',
-                                '#8b5cf6',
-                                '#f59e0b',
-                                '#ef4444',
-                                '#ec4899'
-                            ]
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    color: '#f1f5f9',
-                                    padding: 20,
-                                    font: {
-                                        size: 12
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-            
-            // Products Chart
-            const productsCtx = document.getElementById('productsChart');
-            if(productsCtx) {
-                const productsData = getTopProductsData();
-                charts.products = new Chart(productsCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: productsData.labels,
-                        datasets: [{
-                            label: 'Quantity Sold',
-                            data: productsData.values,
-                            backgroundColor: '#10b981',
-                            borderRadius: 6
-                        }]
-                    },
-                    options: getChartOptions('Top Selling Products')
-                });
-            }
-            
-            // Daily Chart
-            const dailyCtx = document.getElementById('dailyChart');
-            if(dailyCtx) {
-                const dailyData = getDailyPatternData();
-                charts.daily = new Chart(dailyCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: dailyData.labels,
-                        datasets: [{
-                            label: 'Sales Count',
-                            data: dailyData.values,
-                            backgroundColor: '#8b5cf6',
-                            borderRadius: 6
-                        }]
-                    },
-                    options: getChartOptions('Daily Sales Pattern (Today)')
-                });
-            }
-            
-            showNotification('Analytics charts loaded successfully', 'success');
-        }
-        
-        function getRevenueData() {
-            const labels = [];
-            const values = [];
-            
-            for(let i = 6; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                const label = date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
-                labels.push(label);
-                
-                const daySales = sales.filter(sale => {
-                    const saleDate = new Date(sale.date);
-                    return saleDate.toDateString() === date.toDateString();
-                });
-                
-                const revenue = daySales.reduce((sum, sale) => sum + sale.total, 0);
-                values.push(revenue);
-            }
-            
-            return { labels, values };
-        }
-        
-        function getCategoryData() {
-            const categories = {};
-            
-            sales.forEach(sale => {
-                const product = products.find(p => p.id === sale.productId);
-                const category = product ? product.category : 'custom';
-                categories[category] = (categories[category] || 0) + sale.total;
-            });
-            
-            return {
-                labels: Object.keys(categories).map(c => c.charAt(0).toUpperCase() + c.slice(1)),
-                values: Object.values(categories)
-            };
-        }
-        
-        function getTopProductsData() {
-            const productSales = {};
-            
-            sales.forEach(sale => {
-                if(!sale.isCustom) {
-                    const product = products.find(p => p.id === sale.productId);
-                    if(product) {
-                        productSales[product.name] = (productSales[product.name] || 0) + sale.quantity;
-                    }
+        // ==================== ADMIN FUNCTIONS ====================
+        function increaseQuantity(dashboard) {
+            if(dashboard === 'admin') {
+                const input = document.getElementById('admin-quantity');
+                if(input) {
+                    input.value = parseInt(input.value) + 1;
                 }
-            });
-            
-            const sorted = Object.entries(productSales)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 6);
-            
-            return {
-                labels: sorted.map(item => item[0]),
-                values: sorted.map(item => item[1])
-            };
-        }
-        
-        function getDailyPatternData() {
-            const hours = Array.from({length: 12}, (_, i) => {
-                const hour = i + 8;
-                return `${hour}:00`;
-            });
-            
-            const counts = Array(12).fill(0);
-            const today = new Date().toDateString();
-            const todaySales = sales.filter(sale => {
-                const saleDate = new Date(sale.date);
-                return saleDate.toDateString() === today;
-            });
-            
-            todaySales.forEach(sale => {
-                const hour = new Date(sale.date).getHours();
-                if(hour >= 8 && hour <= 19) {
-                    counts[hour - 8]++;
-                }
-            });
-            
-            return {
-                labels: hours,
-                values: counts
-            };
-        }
-        
-        function getChartOptions(title) {
-            return {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: '#f1f5f9',
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: title,
-                        color: '#f1f5f9',
-                        font: {
-                            size: 14,
-                            weight: 'bold'
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: {
-                            color: '#94a3b8'
-                        },
-                        grid: {
-                            color: 'rgba(148, 163, 184, 0.1)'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: '#94a3b8',
-                            callback: function(value) {
-                                return 'Rs. ' + value.toLocaleString();
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(148, 163, 184, 0.1)'
-                        }
-                    }
-                }
-            };
-        }
-        
-        // ==================== FIXED: CLEAR SALES HISTORY (NON-BLOCKING) ====================
-        function clearSalesHistory() {
-            if(confirm('Clear all sales history? This action cannot be undone.')) {
-                // Show loading indicator
-                showLoading(true);
-                
-                // Use setTimeout to avoid blocking UI
-                setTimeout(() => {
-                    sales = [];
-                    
-                    // Update without blocking
-                    requestAnimationFrame(() => {
-                        updateAllDashboards();
-                        showLoading(false);
-                        showNotification('Sales history cleared', 'success');
-                        logActivity('sales_cleared', 'Cleared all sales history');
-                    });
-                }, 50); // Small delay to allow UI to update
             }
         }
         
-        // ==================== ADMIN FUNCTIONS (OPTIMIZED) ====================
+        function decreaseQuantity(dashboard) {
+            if(dashboard === 'admin') {
+                const input = document.getElementById('admin-quantity');
+                if(input && parseInt(input.value) > 1) {
+                    input.value = parseInt(input.value) - 1;
+                }
+            }
+        }
+        
         function addProductAdmin() {
             const nameInput = document.getElementById('admin-product-name');
             const costInput = document.getElementById('admin-cost-price');
@@ -2083,17 +1462,17 @@
             const category = categoryInput ? categoryInput.value : 'other';
             
             if(!name || !costPrice || !sellPrice || !quantity) {
-                showNotification('Please fill all fields correctly', 'warning');
+                alert('Please fill all fields correctly');
                 return;
             }
             
             if(costPrice >= sellPrice) {
-                showNotification('Selling price must be higher than cost price', 'warning');
+                alert('Selling price must be higher than cost price');
                 return;
             }
             
             if(quantity <= 0) {
-                showNotification('Quantity must be at least 1', 'warning');
+                alert('Quantity must be at least 1');
                 return;
             }
             
@@ -2111,97 +1490,20 @@
             
             products.push(product);
             
-            // Handle offline scenario
-            if (!isOnline) {
-                pendingUpdates.push({
-                    type: 'product',
-                    action: 'add',
-                    data: product,
-                    timestamp: Date.now()
-                });
-                showNotification('Product added (offline - will sync when online)', 'info');
-            }
-            
-            // NON-BLOCKING UPDATE: Update all dashboards
-            requestAnimationFrame(() => {
-                updateAllDashboards();
-            });
+            // Update all dashboards
+            updateAllDashboards();
             
             if(nameInput) nameInput.value = '';
             if(costInput) costInput.value = '';
             if(sellInput) sellInput.value = '';
             if(quantityInput) quantityInput.value = 1;
             
-            showNotification(`"${name}" added to inventory (Quantity: ${quantity})`, 'success');
+            alert(`"${name}" added to inventory (Quantity: ${quantity})`);
             logActivity('product_added', `Added ${name} to inventory`);
         }
         
-        function deleteProduct(id) {
-            const product = products.find(p => p.id === id);
-            if(!product) return;
-            
-            if(confirm(`Are you sure you want to delete "${product.name}"?`)) {
-                products = products.filter(p => p.id !== id);
-                
-                // Handle offline scenario
-                if (!isOnline) {
-                    pendingUpdates.push({
-                        type: 'product',
-                        action: 'delete',
-                        data: product,
-                        timestamp: Date.now()
-                    });
-                    showNotification('Product deleted (offline - will sync when online)', 'info');
-                }
-                
-                // NON-BLOCKING UPDATE: Update all dashboards
-                requestAnimationFrame(() => {
-                    updateAllDashboards();
-                });
-                
-                showNotification(`"${product.name}" deleted from inventory`, 'success');
-                logActivity('product_deleted', `Deleted ${product.name}`);
-            }
-        }
-        
-        function editProduct(id) {
-            const product = products.find(p => p.id === id);
-            if(!product) return;
-            
-            const newName = prompt('Edit product name:', product.name);
-            if(newName !== null && newName.trim()) product.name = newName.trim();
-            
-            const newCost = prompt('Edit cost price:', product.costPrice);
-            if(newCost !== null && !isNaN(newCost)) product.costPrice = parseFloat(newCost);
-            
-            const newSell = prompt('Edit selling price:', product.sellPrice);
-            if(newSell !== null && !isNaN(newSell)) product.sellPrice = parseFloat(newSell);
-            
-            const newQty = prompt('Edit quantity:', product.quantity);
-            if(newQty !== null && !isNaN(newQty)) product.quantity = parseInt(newQty);
-            
-            // Handle offline scenario
-            if (!isOnline) {
-                pendingUpdates.push({
-                    type: 'product',
-                    action: 'update',
-                    data: product,
-                    timestamp: Date.now()
-                });
-                showNotification('Product updated (offline - will sync when online)', 'info');
-            }
-            
-            // NON-BLOCKING UPDATE: Update all dashboards
-            requestAnimationFrame(() => {
-                updateAllDashboards();
-            });
-            
-            showNotification('Product updated successfully', 'success');
-            logActivity('product_updated', `Updated ${product.name}`);
-        }
-        
         function updateAdminDashboard() {
-            // Calculate stats (optimized)
+            // Calculate stats
             const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
             const totalProfit = calculateTotalProfit();
             const totalStock = products.reduce((sum, product) => sum + product.quantity, 0);
@@ -2231,12 +1533,10 @@
             if(salesElement) salesElement.textContent = todaySales.length;
             if(avgElement) avgElement.textContent = `Rs. ${avgSale.toLocaleString()}`;
             
-            // Update components with delay to avoid blocking
-            setTimeout(() => {
-                updateAdminProductsList();
-                updateAdminSalesHistory();
-                updateWorkerActivity();
-            }, 0);
+            // Update components
+            updateAdminProductsList();
+            updateAdminSalesHistory();
+            updateWorkerActivity();
         }
         
         function updateAdminProductsList() {
@@ -2254,10 +1554,7 @@
                 return;
             }
             
-            // Use DocumentFragment for better performance
-            const fragment = document.createDocumentFragment();
-            
-            products.forEach(product => {
+            container.innerHTML = products.map(product => {
                 const profitPerItem = product.sellPrice - product.costPrice;
                 const totalValue = product.sellPrice * product.quantity;
                 const totalProfit = profitPerItem * product.quantity;
@@ -2265,68 +1562,62 @@
                     `<span class="text-red-400 text-xs">Low Stock!</span>` : 
                     `<span class="text-green-400 text-xs">In Stock</span>`;
                 
-                const productElement = document.createElement('div');
-                productElement.className = 'p-4 bg-slate-800/50 rounded-lg animate-fadeIn';
-                productElement.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <h4 class="font-bold">${product.name}</h4>
-                            <div class="flex items-center gap-3 text-sm text-gray-400 mt-1">
-                                <span class="px-2 py-1 rounded ${getCategoryColor(product.category)} text-xs">
-                                    ${product.category.toUpperCase()}
-                                </span>
-                                <span>Stock: ${product.quantity}</span>
-                                ${stockStatus}
+                return `
+                    <div class="p-4 bg-slate-800/50 rounded-lg animate-fadeIn">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h4 class="font-bold">${product.name}</h4>
+                                <div class="flex items-center gap-3 text-sm text-gray-400 mt-1">
+                                    <span class="px-2 py-1 rounded ${getCategoryColor(product.category)} text-xs">
+                                        ${product.category.toUpperCase()}
+                                    </span>
+                                    <span>Stock: ${product.quantity}</span>
+                                    ${stockStatus}
+                                </div>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="editProduct(${product.id})" class="text-blue-400 hover:text-blue-300 p-1" title="Edit">
+                                    <i class="fas fa-edit text-sm"></i>
+                                </button>
+                                <button onclick="deleteProduct(${product.id})" class="text-red-400 hover:text-red-300 p-1" title="Delete">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="flex gap-1">
-                            <button onclick="editProduct(${product.id})" class="text-blue-400 hover:text-blue-300 p-1" title="Edit">
-                                <i class="fas fa-edit text-sm"></i>
-                            </button>
-                            <button onclick="deleteProduct(${product.id})" class="text-red-400 hover:text-red-300 p-1" title="Delete">
-                                <i class="fas fa-trash text-sm"></i>
-                            </button>
+                        
+                        <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
+                            <div class="text-center p-2 bg-slate-900/50 rounded">
+                                <p class="text-gray-400 text-xs">Cost Price</p>
+                                <p class="font-bold">Rs. ${product.costPrice.toLocaleString()}</p>
+                            </div>
+                            <div class="text-center p-2 bg-slate-900/50 rounded">
+                                <p class="text-gray-400 text-xs">Selling Price</p>
+                                <p class="font-bold text-green-400">Rs. ${product.sellPrice.toLocaleString()}</p>
+                            </div>
+                            <div class="text-center p-2 bg-slate-900/50 rounded">
+                                <p class="text-gray-400 text-xs">Profit/Item</p>
+                                <p class="font-bold text-yellow-400">Rs. ${profitPerItem.toLocaleString()}</p>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
-                        <div class="text-center p-2 bg-slate-900/50 rounded">
-                            <p class="text-gray-400 text-xs">Cost Price</p>
-                            <p class="font-bold">Rs. ${product.costPrice.toLocaleString()}</p>
-                        </div>
-                        <div class="text-center p-2 bg-slate-900/50 rounded">
-                            <p class="text-gray-400 text-xs">Selling Price</p>
-                            <p class="font-bold text-green-400">Rs. ${product.sellPrice.toLocaleString()}</p>
-                        </div>
-                        <div class="text-center p-2 bg-slate-900/50 rounded">
-                            <p class="text-gray-400 text-xs">Profit/Item</p>
-                            <p class="font-bold text-yellow-400">Rs. ${profitPerItem.toLocaleString()}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-3 mt-3 text-xs">
-                        <div class="text-center p-2 bg-blue-900/20 rounded">
-                            <p>Total Value</p>
-                            <p class="font-bold">Rs. ${totalValue.toLocaleString()}</p>
-                        </div>
-                        <div class="text-center p-2 bg-green-900/20 rounded">
-                            <p>Total Profit</p>
-                            <p class="font-bold">Rs. ${totalProfit.toLocaleString()}</p>
+                        
+                        <div class="grid grid-cols-2 gap-3 mt-3 text-xs">
+                            <div class="text-center p-2 bg-blue-900/20 rounded">
+                                <p>Total Value</p>
+                                <p class="font-bold">Rs. ${totalValue.toLocaleString()}</p>
+                            </div>
+                            <div class="text-center p-2 bg-green-900/20 rounded">
+                                <p>Total Profit</p>
+                                <p class="font-bold">Rs. ${totalProfit.toLocaleString()}</p>
+                            </div>
                         </div>
                     </div>
                 `;
-                
-                fragment.appendChild(productElement);
-            });
+            }).join('');
             
-            // Clear and append in one operation
-            container.innerHTML = '';
-            container.appendChild(fragment);
-            
-            // Setup search functionality with debounce
+            // Setup search
             const searchInput = document.getElementById('admin-search');
             if(searchInput) {
-                searchInput.oninput = debounce(function() {
+                searchInput.oninput = function() {
                     const term = this.value.toLowerCase();
                     const items = container.querySelectorAll('.animate-fadeIn');
                     
@@ -2334,20 +1625,186 @@
                         const text = item.textContent.toLowerCase();
                         item.style.display = text.includes(term) ? 'block' : 'none';
                     });
-                }, 300);
+                };
+            }
+        }
+        
+        function editProduct(id) {
+            const product = products.find(p => p.id === id);
+            if(!product) return;
+            
+            const newName = prompt('Edit product name:', product.name);
+            if(newName !== null && newName.trim()) product.name = newName.trim();
+            
+            const newCost = prompt('Edit cost price:', product.costPrice);
+            if(newCost !== null && !isNaN(newCost)) product.costPrice = parseFloat(newCost);
+            
+            const newSell = prompt('Edit selling price:', product.sellPrice);
+            if(newSell !== null && !isNaN(newSell)) product.sellPrice = parseFloat(newSell);
+            
+            const newQty = prompt('Edit quantity:', product.quantity);
+            if(newQty !== null && !isNaN(newQty)) product.quantity = parseInt(newQty);
+            
+            updateAllDashboards();
+            alert('Product updated successfully');
+            logActivity('product_updated', `Updated ${product.name}`);
+        }
+        
+        function deleteProduct(id) {
+            const product = products.find(p => p.id === id);
+            if(!product) return;
+            
+            if(confirm(`Are you sure you want to delete "${product.name}"?`)) {
+                products = products.filter(p => p.id !== id);
+                updateAllDashboards();
+                alert(`"${product.name}" deleted from inventory`);
+                logActivity('product_deleted', `Deleted ${product.name}`);
             }
         }
         
         function refreshAdmin() {
-            // Force reload from storage and update without blocking
-            loadAllData();
-            requestAnimationFrame(() => {
-                updateAllDashboards();
-            });
-            showNotification('Dashboard refreshed with latest data', 'info');
+            updateAdminDashboard();
+            alert('Dashboard refreshed');
         }
         
-        // ==================== WORKER FUNCTIONS (OPTIMIZED) ====================
+        function clearSalesHistory() {
+            if(confirm('Clear all sales history? This action cannot be undone.')) {
+                sales = [];
+                updateAllDashboards();
+                alert('Sales history cleared');
+                logActivity('sales_cleared', 'Cleared all sales history');
+            }
+        }
+        
+        // ==================== WORKER FUNCTIONS ====================
+        function updateWorkerDashboard() {
+            const availableProducts = products.filter(p => p.quantity > 0).length;
+            const today = new Date().toDateString();
+            const todaySales = sales.filter(sale => {
+                const saleDate = new Date(sale.date);
+                return saleDate.toDateString() === today && 
+                       sale.worker === (currentUser ? currentUser.name : 'Worker');
+            });
+            const sessionTotal = workerSessionSales.reduce((sum, sale) => sum + sale.total, 0);
+            const todayTotal = todaySales.reduce((sum, sale) => sum + sale.total, 0);
+            
+            const availableElement = document.getElementById('worker-available-products');
+            const todayCountElement = document.getElementById('worker-today-count');
+            const sessionElement = document.getElementById('worker-session-total');
+            const todayTotalElement = document.getElementById('worker-today-total');
+            
+            if(availableElement) availableElement.textContent = availableProducts;
+            if(todayCountElement) todayCountElement.textContent = todaySales.length;
+            if(sessionElement) sessionElement.textContent = sessionTotal.toLocaleString();
+            if(todayTotalElement) todayTotalElement.textContent = `Rs. ${todayTotal.toLocaleString()}`;
+            
+            updateWorkerProductsGrid();
+            updateWorkerSalesList();
+        }
+        
+        function updateWorkerProductsGrid() {
+            const container = document.getElementById('worker-products-grid');
+            if(!container) return;
+            
+            const availableProducts = products.filter(p => p.quantity > 0);
+            
+            if(availableProducts.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-3 text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-3xl text-yellow-500 mb-3"></i>
+                        <p class="text-gray-500">All products are out of stock</p>
+                        <p class="text-sm text-gray-400">Contact admin to restock inventory</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = availableProducts.map(product => {
+                const isLowStock = product.quantity <= product.minStock;
+                
+                return `
+                    <div class="bg-slate-800/50 rounded-xl p-4 hover:bg-slate-800/70 transition blue-glow">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="font-bold">${product.name}</h4>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-xs px-2 py-1 rounded ${getCategoryColor(product.category)}">
+                                        ${product.category}
+                                    </span>
+                                    ${isLowStock ? '<span class="text-xs px-2 py-1 rounded bg-red-900/30 text-red-300">Low Stock</span>' : ''}
+                                </div>
+                            </div>
+                            <span class="text-sm ${isLowStock ? 'text-red-400' : 'text-gray-400'}">Stock: ${product.quantity}</span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <p class="text-2xl font-bold text-green-400 text-center">Rs. ${product.sellPrice.toLocaleString()}</p>
+                            <p class="text-xs text-gray-500 text-center">Selling Price</p>
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <button onclick="quickSale(${product.id})" class="flex-1 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-bolt mr-1"></i>Quick Sale
+                            </button>
+                            <button onclick="showSaleDialog(${product.id})" class="bg-blue-900/30 text-blue-300 px-3 py-2 rounded-lg hover:bg-blue-900/50">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Setup search
+            const searchInput = document.getElementById('worker-search');
+            if(searchInput) {
+                searchInput.oninput = function() {
+                    const term = this.value.toLowerCase();
+                    const items = container.querySelectorAll('.blue-glow');
+                    
+                    items.forEach(item => {
+                        const text = item.textContent.toLowerCase();
+                        item.style.display = text.includes(term) ? 'block' : 'none';
+                    });
+                };
+            }
+        }
+        
+        function quickSale(productId) {
+            const product = products.find(p => p.id === productId);
+            if(!product) {
+                alert('Product not found');
+                return;
+            }
+            
+            if(product.quantity <= 0) {
+                alert('Product is out of stock');
+                return;
+            }
+            
+            processSale(product, 1);
+        }
+        
+        function showSaleDialog(productId) {
+            const product = products.find(p => p.id === productId);
+            if(!product) return;
+            
+            if(product.quantity <= 0) {
+                alert('Product is out of stock');
+                return;
+            }
+            
+            const quantity = prompt(`Enter quantity for ${product.name} (Available: ${product.quantity}):`, "1");
+            if(!quantity || isNaN(quantity) || parseInt(quantity) <= 0) return;
+            
+            const qty = parseInt(quantity);
+            if(qty > product.quantity) {
+                alert(`Only ${product.quantity} items available`);
+                return;
+            }
+            
+            processSale(product, qty);
+        }
+        
         function processSale(product, quantity) {
             const sale = {
                 id: Date.now(),
@@ -2365,22 +1822,9 @@
             workerSessionSales.push(sale);
             product.quantity -= quantity;
             
-            // Handle offline scenario
-            if (!isOnline) {
-                pendingUpdates.push({
-                    type: 'sale',
-                    data: sale,
-                    timestamp: Date.now()
-                });
-                showNotification('Sale processed (offline - will sync when online)', 'info');
-            }
+            updateAllDashboards();
             
-            // NON-BLOCKING UPDATE: Update all dashboards
-            requestAnimationFrame(() => {
-                updateAllDashboards();
-            });
-            
-            showNotification(`Sold ${product.name} x${quantity} for Rs. ${sale.total.toLocaleString()}`, 'success');
+            alert(`Sold ${product.name} x${quantity} for Rs. ${sale.total.toLocaleString()}`);
             logActivity('sale', `${currentUser ? currentUser.name : 'Worker'} sold ${product.name} x${quantity}`, sale.total);
         }
         
@@ -2394,12 +1838,12 @@
             const quantity = quantityInput ? parseInt(quantityInput.value) : 0;
             
             if(!productName || !price || !quantity) {
-                showNotification('Please fill all fields for manual sale', 'warning');
+                alert('Please fill all fields for manual sale');
                 return;
             }
             
             if(price <= 0 || quantity <= 0) {
-                showNotification('Price and quantity must be positive numbers', 'warning');
+                alert('Price and quantity must be positive numbers');
                 return;
             }
             
@@ -2418,35 +1862,90 @@
             sales.push(sale);
             workerSessionSales.push(sale);
             
-            // Handle offline scenario
-            if (!isOnline) {
-                pendingUpdates.push({
-                    type: 'sale',
-                    data: sale,
-                    timestamp: Date.now()
-                });
-                showNotification('Sale processed (offline - will sync when online)', 'info');
-            }
-            
-            // NON-BLOCKING UPDATE: Update all dashboards
-            requestAnimationFrame(() => {
-                updateAllDashboards();
-            });
+            updateAllDashboards();
             
             if(productInput) productInput.value = '';
             if(priceInput) priceInput.value = '';
             if(quantityInput) quantityInput.value = 1;
             
-            showNotification(`Custom sale: ${productName} x${quantity} for Rs. ${sale.total.toLocaleString()}`, 'success');
+            alert(`Custom sale: ${productName} x${quantity} for Rs. ${sale.total.toLocaleString()}`);
             logActivity('custom_sale', `${currentUser ? currentUser.name : 'Worker'} made custom sale: ${productName}`, sale.total);
         }
         
-        // ==================== REAL-TIME SEARCH SETUP ====================
+        function updateWorkerSalesList() {
+            const container = document.getElementById('worker-sales-list');
+            if(!container) return;
+            
+            if(workerSessionSales.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-shopping-cart text-3xl text-gray-700 mb-3"></i>
+                        <p class="text-gray-500">No sales in this session</p>
+                        <p class="text-sm text-gray-400">Start selling using the products above</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const sessionTotal = workerSessionSales.reduce((sum, sale) => sum + sale.total, 0);
+            
+            container.innerHTML = `
+                <div class="mb-4 p-3 bg-green-900/20 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium">Session Total</span>
+                        <span class="text-xl font-bold text-green-400">Rs. ${sessionTotal.toLocaleString()}</span>
+                    </div>
+                    <p class="text-sm text-gray-400">${workerSessionSales.length} sales in this session</p>
+                </div>
+                ${workerSessionSales.slice(-5).reverse().map(sale => `
+                    <div class="p-3 bg-slate-800/30 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-medium">${sale.productName}</p>
+                                <div class="flex items-center gap-3 text-sm text-gray-400 mt-1">
+                                    <span>Qty: ${sale.quantity}</span>
+                                    <span>•</span>
+                                    <span>${new Date(sale.date).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'})}</span>
+                                    ${sale.isCustom ? '<span class="text-yellow-400">• CUSTOM</span>' : ''}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-green-400">Rs. ${sale.total.toLocaleString()}</p>
+                                <p class="text-sm text-gray-400">@ Rs. ${sale.price.toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+        
+        function simulateBarcode() {
+            const availableProducts = products.filter(p => p.quantity > 0);
+            if(availableProducts.length === 0) {
+                alert('No products available to scan');
+                return;
+            }
+            
+            const randomProduct = availableProducts[Math.floor(Math.random() * availableProducts.length)];
+            
+            const searchInput = document.getElementById('worker-search');
+            if(searchInput) {
+                searchInput.value = randomProduct.name;
+                
+                // Trigger search
+                const event = new Event('input');
+                searchInput.dispatchEvent(event);
+            }
+            
+            alert(`Scanned: ${randomProduct.name} - Rs. ${randomProduct.sellPrice}`);
+        }
+        
+        // ==================== REAL-TIME SEARCH ====================
         function setupRealTimeSearch() {
-            // Admin search with debounce
+            // Admin search
             const adminSearch = document.getElementById('admin-search');
             if (adminSearch) {
-                adminSearch.addEventListener('input', debounce(function() {
+                adminSearch.addEventListener('input', function() {
                     const term = this.value.toLowerCase();
                     const container = document.getElementById('admin-products-list');
                     if (container) {
@@ -2456,13 +1955,13 @@
                             item.style.display = text.includes(term) ? 'block' : 'none';
                         });
                     }
-                }, 300));
+                });
             }
             
-            // Worker search with debounce
+            // Worker search
             const workerSearch = document.getElementById('worker-search');
             if (workerSearch) {
-                workerSearch.addEventListener('input', debounce(function() {
+                workerSearch.addEventListener('input', function() {
                     const term = this.value.toLowerCase();
                     const container = document.getElementById('worker-products-grid');
                     if (container) {
@@ -2472,7 +1971,7 @@
                             item.style.display = text.includes(term) ? 'block' : 'none';
                         });
                     }
-                }, 300));
+                });
             }
         }
         
@@ -2517,108 +2016,112 @@
                 activityLog = activityLog.slice(-100);
             }
             
-            // Save in background
-            setTimeout(saveAllData, 0);
+            saveAllData();
         }
         
-        function showNotification(message, type = 'info') {
-            // Remove existing notifications
-            const existingNotifications = document.querySelectorAll('.notification-toast');
-            existingNotifications.forEach(n => n.remove());
-            
-            const notification = document.createElement('div');
-            notification.className = `notification-toast fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 animate-fadeIn ${type === 'success' ? 'bg-green-900/90 text-green-100' : type === 'warning' ? 'bg-yellow-900/90 text-yellow-100' : type === 'error' ? 'bg-red-900/90 text-red-100' : 'bg-blue-900/90 text-blue-100'}`;
-            notification.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : type === 'error' ? 'times-circle' : 'info-circle'}"></i>
-                    <span>${message}</span>
-                </div>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.classList.add('opacity-0', 'transition-opacity', 'duration-300');
-                setTimeout(() => {
-                    if(document.body.contains(notification)) {
-                        document.body.removeChild(notification);
-                    }
-                }, 300);
-            }, 3000);
-        }
-        
-        function showLoading(show) {
-            const overlay = document.getElementById('loading-overlay');
-            if(overlay) {
-                overlay.classList.toggle('hidden', !show);
+        // ==================== PASSWORD FUNCTIONS ====================
+        function showPasswordManager() {
+            const modal = document.getElementById('password-modal');
+            if(modal) {
+                modal.classList.add('active');
+                document.getElementById('admin-password-field').value = systemPasswords.admin;
+                document.getElementById('worker-password-field').value = systemPasswords.worker;
             }
         }
         
-        // ==================== BROWSER TAB SYNC (OPTIMIZED) ====================
-        // Listen for storage changes from other tabs with debounce
-        window.addEventListener('storage', debounce(function(event) {
-            if (event.key === SYSTEM_CONFIG.storageKey) {
-                console.log("Storage changed in another tab, updating...");
-                
-                // Only update if this tab is active
-                if (!document.hasFocus()) {
-                    return;
+        function closePasswordManager() {
+            const modal = document.getElementById('password-modal');
+            if(modal) {
+                modal.classList.remove('active');
+            }
+        }
+        
+        function toggleAdminPassword() {
+            const input = document.getElementById('admin-password-field');
+            const icon = document.getElementById('admin-password-toggle');
+            togglePasswordVisibility(input, icon);
+        }
+        
+        function toggleWorkerPassword() {
+            const input = document.getElementById('worker-password-field');
+            const icon = document.getElementById('worker-password-toggle');
+            togglePasswordVisibility(input, icon);
+        }
+        
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const icon = document.getElementById('password-toggle');
+            togglePasswordVisibility(input, icon);
+        }
+        
+        function togglePasswordVisibility(input, icon) {
+            if(input && icon) {
+                if(input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
                 }
-                
-                loadAllData();
-                
-                // Use requestAnimationFrame for smooth update
-                requestAnimationFrame(() => {
-                    updateAllDashboards();
-                    showNotification('Data updated from another tab', 'info');
-                });
-            }
-        }, 500));
-        
-        // ==================== PERFORMANCE MONITORING ====================
-        function monitorPerformance() {
-            if ('PerformanceObserver' in window) {
-                const observer = new PerformanceObserver((list) => {
-                    for (const entry of list.getEntries()) {
-                        if (entry.duration > 100) { // Log long tasks
-                            console.warn('Long task detected:', entry);
-                        }
-                    }
-                });
-                
-                observer.observe({ entryTypes: ['longtask'] });
             }
         }
         
-        // Start performance monitoring
-        setTimeout(monitorPerformance, 1000);
-        
-        // ==================== SECURITY MEASURES ====================
-        document.addEventListener('contextmenu', function(e) {
-            if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-                e.preventDefault();
+        // ==================== MODAL FUNCTIONS ====================
+        function showAnalytics() {
+            const modal = document.getElementById('analytics-modal');
+            if(modal) {
+                modal.classList.add('active');
+                setTimeout(initializeCharts, 100);
             }
-        });
+        }
         
-        // ==================== FINAL SYSTEM READY MESSAGE ====================
-        console.log("=========================================");
-        console.log("PERFORMANCE OPTIMIZATIONS ACTIVE:");
-        console.log("1. Non-blocking UI updates");
-        console.log("2. Debounced event handlers");
-        console.log("3. RequestAnimationFrame for smooth animations");
-        console.log("4. Background data saving");
-        console.log("5. Offline support with pending updates");
-        console.log("6. Network monitoring");
-        console.log("7. Session timeout management");
-        console.log("=========================================");
+        function closeAnalytics() {
+            const modal = document.getElementById('analytics-modal');
+            if(modal) {
+                modal.classList.remove('active');
+                Object.values(charts).forEach(chart => {
+                    if(chart) chart.destroy();
+                });
+                charts = {};
+            }
+        }
         
-        // Performance benchmark
-        setTimeout(() => {
-            const measures = performance.getEntriesByType('measure');
-            measures.forEach(measure => {
-                console.log(`${measure.name}: ${Math.round(measure.duration)}ms`);
-            });
-        }, 2000);
+        function showReports() {
+            const modal = document.getElementById('reports-modal');
+            if(modal) {
+                modal.classList.add('active');
+            }
+        }
+        
+        function closeReports() {
+            const modal = document.getElementById('reports-modal');
+            if(modal) {
+                modal.classList.remove('active');
+                const output = document.getElementById('report-output');
+                if(output) {
+                    output.classList.add('hidden');
+                    output.innerHTML = '';
+                }
+            }
+        }
+        
+        // ==================== FINAL SETUP ====================
+        console.log("=========================================");
+        console.log("SYSTEM FEATURES:");
+        console.log("1. Real-time data sync across all browsers");
+        console.log("2. 24-hour session persistence");
+        console.log("3. Auto-save on every change");
+        console.log("4. Cross-tab synchronization");
+        console.log("5. Data persists on refresh");
+        console.log("6. Admin can add/delete/edit products");
+        console.log("7. Worker can make sales");
+        console.log("8. All changes save automatically");
+        console.log("=========================================");
+        console.log("Admin Password: adminmb123");
+        console.log("Worker Password: worker3214");
+        console.log("=========================================");
     </script>
 </body>
 </html>
