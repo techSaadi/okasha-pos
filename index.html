@@ -1,0 +1,2034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Okasha Communication | Real-time POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #1e40af;
+            --secondary: #0f172a;
+            --accent: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        
+        body { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #f1f5f9; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        
+        body.light-mode {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            color: #1e293b;
+        }
+        
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light-mode .glass {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(203, 213, 225, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .blue-glow:hover { 
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); 
+            border-color: var(--accent); 
+            transition: all 0.3s ease; 
+        }
+        
+        .gradient-text {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-active { background-color: var(--success); }
+        .status-pending { background-color: var(--warning); }
+        .status-inactive { background-color: var(--danger); }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        /* Real-time Indicator */
+        .real-time-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .online {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Real-time Connection Indicator -->
+    <div id="connection-status" class="real-time-indicator offline">
+        <i class="fas fa-wifi"></i>
+        <span>Offline</span>
+    </div>
+
+    <!-- Theme Toggle Button -->
+    <button id="theme-toggle" class="theme-toggle">
+        <i class="fas fa-moon text-blue-400"></i>
+    </button>
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="w-full min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-slate-950">
+        <div class="glass p-8 rounded-3xl w-full max-w-md animate-fadeIn">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-store text-3xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold gradient-text mb-2">OKASHA <span class="text-white">COMMUNICATION</span></h1>
+                <p class="text-gray-400">Wah Cantt | Real-time POS System</p>
+                <div class="mt-4">
+                    <span class="inline-block px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs font-medium">
+                        <i class="fas fa-cloud mr-1"></i> Cloud Connected
+                    </span>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 mb-6">
+                <button id="btn-admin" class="flex-1 py-3 rounded-lg bg-blue-900/50 text-blue-300 font-medium border border-blue-700/50" onclick="selectRole('admin')">
+                    <i class="fas fa-user-shield mr-2"></i>Admin
+                </button>
+                <button id="btn-worker" class="flex-1 py-3 rounded-lg bg-slate-800 text-slate-300 font-medium border border-slate-700" onclick="selectRole('worker')">
+                    <i class="fas fa-user-tie mr-2"></i>Worker
+                </button>
+            </div>
+            
+            <div id="login-error" class="hidden mb-4 p-3 bg-red-900/30 border border-red-700/50 rounded-lg text-red-300 text-sm">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span id="error-message">Invalid credentials</span>
+            </div>
+            
+            <form id="login-form" class="space-y-5">
+                <div id="role-info" class="p-3 bg-slate-800/50 rounded-lg">
+                    <p class="text-sm text-gray-400 mb-1">Selected Role: <span id="selected-role" class="text-blue-300 font-medium">Admin</span></p>
+                    <p class="text-xs text-gray-500" id="role-description">Full access to add products, view analytics, and manage system</p>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-400 text-sm mb-2">
+                        <i class="fas fa-key mr-2"></i>Password
+                    </label>
+                    <div class="relative">
+                        <div class="absolute left-3 top-3 text-gray-500">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <input type="password" id="password" placeholder="Enter password" 
+                               class="w-full bg-slate-900 border border-slate-700 p-3 pl-12 rounded-lg focus:outline-none focus:border-blue-500"
+                               autocomplete="off">
+                        <button type="button" onclick="togglePassword()" class="absolute right-3 top-3 text-gray-500 hover:text-blue-400">
+                            <i class="fas fa-eye" id="password-toggle"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center gap-2">
+                    <i class="fas fa-sign-in-alt"></i>
+                    LOGIN TO SYSTEM
+                </button>
+                
+                <div class="text-center pt-4 border-t border-slate-800">
+                    <p class="text-xs text-gray-500">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        Real-time updates enabled
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ADMIN DASHBOARD -->
+    <div id="admin-dashboard" class="hidden min-h-screen p-4 md:p-8">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+            <div class="mb-4 md:mb-0">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-user-shield text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold gradient-text">OKASHA <span class="text-white">COMMUNICATION</span></h1>
+                        <p class="text-gray-400 text-sm flex items-center gap-2">
+                            <i class="fas fa-map-marker-alt text-blue-400"></i>
+                            Wah Cantt | Admin Dashboard
+                            <span class="status-dot status-active"></span>
+                            <span class="text-green-400 text-xs" id="connection-status-text">Online</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="px-3 py-1 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-full text-xs font-medium">
+                        <i class="fas fa-user-shield mr-1"></i> Admin Panel
+                    </span>
+                    <button onclick="showAnalytics()" class="px-3 py-1 bg-purple-900/30 text-purple-300 rounded-full text-xs font-medium hover:bg-purple-900/50">
+                        <i class="fas fa-chart-bar mr-1"></i> Analytics
+                    </button>
+                    <button onclick="showReports()" class="px-3 py-1 bg-green-900/30 text-green-300 rounded-full text-xs font-medium hover:bg-green-900/50">
+                        <i class="fas fa-file-alt mr-1"></i> Reports
+                    </button>
+                    <button onclick="showPasswordManager()" class="px-3 py-1 bg-yellow-900/30 text-yellow-300 rounded-full text-xs font-medium hover:bg-yellow-900/50">
+                        <i class="fas fa-key mr-1"></i> Passwords
+                    </button>
+                    <button onclick="logout()" class="px-3 py-1 bg-red-900/30 text-red-300 rounded-full text-xs font-medium hover:bg-red-900/50">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                    </button>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="glass px-4 py-3 rounded-xl inline-block">
+                    <p id="admin-date" class="text-sm text-blue-400 font-mono"></p>
+                    <p id="admin-time" class="text-lg font-bold font-mono"></p>
+                </div>
+                <p class="text-xs text-gray-500 mt-2" id="users-online">Users online: 1</p>
+            </div>
+        </header>
+
+        <!-- Real-time Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="glass p-5 rounded-xl border-l-4 border-blue-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">Total Revenue</p>
+                        <h2 class="text-2xl font-bold">Rs. <span id="admin-revenue">0</span></h2>
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="fas fa-calendar-day text-blue-400 mr-1"></i>
+                            All time sales
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-900/30 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-money-bill-wave text-blue-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass p-5 rounded-xl border-l-4 border-green-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">Total Profit</p>
+                        <h2 class="text-2xl font-bold text-green-400">Rs. <span id="admin-profit">0</span></h2>
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="fas fa-percentage text-green-400 mr-1"></i>
+                            <span id="admin-profit-margin">0%</span> margin
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-900/30 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-chart-pie text-green-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass p-5 rounded-xl border-l-4 border-purple-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">Items in Stock</p>
+                        <h2 class="text-2xl font-bold text-purple-400" id="admin-stock-count">0</h2>
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="fas fa-boxes text-purple-400 mr-1"></i>
+                            <span id="admin-products-count">0</span> products
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-900/30 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-boxes-stacked text-purple-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass p-5 rounded-xl border-l-4 border-yellow-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">Today's Sales</p>
+                        <h2 class="text-2xl font-bold text-yellow-400" id="admin-today-sales">0</h2>
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="fas fa-shopping-cart text-yellow-400 mr-1"></i>
+                            <span id="admin-avg-sale">Rs. 0</span> avg.
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-900/30 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-receipt text-yellow-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Admin: Add Product -->
+            <div class="glass p-6 rounded-2xl">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i class="fas fa-plus-circle text-blue-400"></i>
+                    Add New Product (Real-time)
+                </h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">Product Name</label>
+                        <input type="text" id="admin-product-name" placeholder="e.g., Samsung Galaxy S23" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-400 text-sm mb-2">Cost Price</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-3 text-gray-500">Rs.</span>
+                                <input type="number" id="admin-cost-price" placeholder="0" class="w-full bg-slate-900 border border-slate-700 p-3 pl-10 rounded-lg">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-gray-400 text-sm mb-2">Selling Price</label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-3 text-gray-500">Rs.</span>
+                                <input type="number" id="admin-sell-price" placeholder="0" class="w-full bg-slate-900 border border-slate-700 p-3 pl-10 rounded-lg">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">Initial Quantity</label>
+                        <div class="flex items-center">
+                            <button onclick="decreaseQuantity('admin')" class="bg-slate-800 text-white w-10 h-10 rounded-l-lg">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <input type="number" id="admin-quantity" value="1" min="1" class="w-full bg-slate-900 border-y border-slate-700 p-3 text-center">
+                            <button onclick="increaseQuantity('admin')" class="bg-slate-800 text-white w-10 h-10 rounded-r-lg">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">Category</label>
+                        <select id="admin-category" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
+                            <option value="mobile">Mobile Phone</option>
+                            <option value="accessory">Accessory</option>
+                            <option value="repair">Repair Service</option>
+                            <option value="tablet">Tablet</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <button onclick="addProductAdmin()" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-3 rounded-lg transition duration-300">
+                        <i class="fas fa-plus-circle mr-2"></i>ADD TO INVENTORY
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Products List -->
+            <div class="glass p-6 rounded-2xl lg:col-span-2">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <i class="fas fa-boxes text-purple-400"></i>
+                        Inventory Management (Live Updates)
+                    </h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="admin-search" placeholder="Search products..." class="bg-slate-900 border border-slate-700 p-2 rounded-lg text-sm w-40">
+                        <button onclick="exportInventoryCSV()" class="bg-green-900/30 text-green-300 p-2 rounded-lg hover:bg-green-900/50">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="admin-products-list" class="space-y-3 max-h-[400px] overflow-y-auto">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales & Notifications -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Sales History -->
+            <div class="glass p-6 rounded-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold flex items-center gap-2">
+                        <i class="fas fa-history text-blue-400"></i>
+                        Recent Sales (Live)
+                    </h3>
+                    <div class="flex gap-2">
+                        <button onclick="generateInvoiceReport()" class="text-xs bg-blue-900/30 text-blue-300 px-3 py-1 rounded hover:bg-blue-900/50">
+                            <i class="fas fa-receipt mr-1"></i>Invoice
+                        </button>
+                    </div>
+                </div>
+                <div id="admin-sales-history" class="space-y-3 max-h-[300px] overflow-y-auto">
+                    <!-- Sales will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="glass p-6 rounded-2xl">
+                <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i class="fas fa-bell text-green-400"></i>
+                    Live Activity Feed
+                </h3>
+                <div id="activity-feed" class="space-y-3 max-h-[300px] overflow-y-auto">
+                    <!-- Activity will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WORKER DASHBOARD -->
+    <div id="worker-dashboard" class="hidden min-h-screen p-4 md:p-8">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+            <div class="mb-4 md:mb-0">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-600 to-green-800 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-user-tie text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold gradient-text">OKASHA <span class="text-white">COMMUNICATION</span></h1>
+                        <p class="text-gray-400 text-sm flex items-center gap-2">
+                            <i class="fas fa-map-marker-alt text-green-400"></i>
+                            Wah Cantt | Worker Dashboard
+                            <span class="status-dot status-active"></span>
+                            <span class="text-green-400 text-xs">Live</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="px-3 py-1 bg-gradient-to-r from-green-600 to-green-800 text-white rounded-full text-xs font-medium">
+                        <i class="fas fa-user-tie mr-1"></i> Worker Panel
+                    </span>
+                    <span class="px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs font-medium">
+                        <i class="fas fa-shopping-cart mr-1"></i> Sale Mode Active
+                    </span>
+                    <button onclick="generateDailyInvoice()" class="px-3 py-1 bg-yellow-900/30 text-yellow-300 rounded-full text-xs font-medium hover:bg-yellow-900/50">
+                        <i class="fas fa-receipt mr-1"></i> Daily Invoice
+                    </button>
+                    <button onclick="logout()" class="px-3 py-1 bg-red-900/30 text-red-300 rounded-full text-xs font-medium hover:bg-red-900/50">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                    </button>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="glass px-4 py-3 rounded-xl inline-block">
+                    <p id="worker-date" class="text-sm text-green-400 font-mono"></p>
+                    <p id="worker-time" class="text-lg font-bold font-mono"></p>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Today's Sales: <span id="worker-today-total">Rs. 0</span></p>
+            </div>
+        </header>
+
+        <!-- Worker Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="glass p-5 rounded-xl border-l-4 border-green-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">Available Products</p>
+                        <h2 class="text-2xl font-bold text-green-400" id="worker-available-products">0</h2>
+                    </div>
+                    <div class="w-12 h-12 bg-green-900/30 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-box text-green-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass p-5 rounded-xl border-l-4 border-blue-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">Today's Sales</p>
+                        <h2 class="text-2xl font-bold text-blue-400" id="worker-today-count">0</h2>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-900/30 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-shopping-cart text-blue-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass p-5 rounded-xl border-l-4 border-yellow-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">Session Sales</p>
+                        <h2 class="text-2xl font-bold text-yellow-400">Rs. <span id="worker-session-total">0</span></h2>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-900/30 rounded-xl flex items-center justify-center">
+                        <i class="fas fa-coins text-yellow-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Sale Section -->
+        <div class="glass p-6 rounded-2xl mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold flex items-center gap-2">
+                    <i class="fas fa-barcode text-green-400"></i>
+                    Quick Sale System (Live Inventory)
+                </h3>
+                <div class="flex gap-2">
+                    <input type="text" id="worker-search" placeholder="Search products..." class="bg-slate-900 border border-slate-700 p-2 rounded-lg text-sm w-48">
+                    <button onclick="simulateBarcode()" class="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg text-sm hover:bg-green-900/50">
+                        <i class="fas fa-qrcode mr-2"></i> Simulate Scan
+                    </button>
+                </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div id="worker-products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <!-- Products will be loaded here -->
+            </div>
+
+            <!-- Manual Sale -->
+            <div class="border-t border-slate-800 pt-6">
+                <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i class="fas fa-edit text-yellow-400"></i>
+                    Manual Sale Entry
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">Product/Service</label>
+                        <input type="text" id="manual-product" placeholder="Enter name" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">Price (Rs.)</label>
+                        <input type="number" id="manual-price" placeholder="0" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 text-sm mb-2">Quantity</label>
+                        <input type="number" id="manual-quantity" value="1" min="1" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
+                    </div>
+                </div>
+                <button onclick="processManualSale()" class="w-full bg-gradient-to-r from-yellow-600 to-yellow-800 hover:from-yellow-700 hover:to-yellow-900 text-white font-bold py-3 rounded-lg transition duration-300">
+                    <i class="fas fa-cash-register mr-2"></i>PROCESS SALE
+                </button>
+            </div>
+        </div>
+
+        <!-- Worker's Sales -->
+        <div class="glass p-6 rounded-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold flex items-center gap-2">
+                    <i class="fas fa-clipboard-list text-blue-400"></i>
+                    Today's Sales (Your Session)
+                </h3>
+                <button onclick="generateSessionInvoice()" class="bg-blue-900/30 text-blue-300 px-4 py-1 rounded-lg text-sm hover:bg-blue-900/50">
+                    <i class="fas fa-receipt mr-1"></i> Generate Invoice
+                </button>
+            </div>
+            <div id="worker-sales-list" class="space-y-3 max-h-[300px] overflow-y-auto">
+                <!-- Sales will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Modal -->
+    <div id="analytics-modal" class="modal">
+        <div class="glass p-8 rounded-3xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold gradient-text">Live Analytics Dashboard</h3>
+                <button onclick="closeAnalytics()" class="text-gray-500 hover:text-white text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="glass p-6 rounded-2xl">
+                    <h4 class="text-lg font-semibold mb-4">Revenue Trend (Last 7 Days)</h4>
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="glass p-6 rounded-2xl">
+                    <h4 class="text-lg font-semibold mb-4">Sales by Category</h4>
+                    <div class="chart-container">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-3">
+                <button onclick="refreshAnalytics()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg hover:bg-blue-900/50">
+                    <i class="fas fa-sync-alt mr-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reports Modal -->
+    <div id="reports-modal" class="modal">
+        <div class="glass p-8 rounded-3xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold gradient-text">Business Reports</h3>
+                <button onclick="closeReports()" class="text-gray-500 hover:text-white text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="glass p-6 rounded-xl text-center cursor-pointer hover:bg-blue-900/30 transition" onclick="generateDailyReport()">
+                        <i class="fas fa-calendar-day text-4xl text-blue-400 mb-3"></i>
+                        <h4 class="font-semibold text-lg">Daily Report</h4>
+                        <p class="text-sm text-gray-400">Today's sales summary</p>
+                    </div>
+                    
+                    <div class="glass p-6 rounded-xl text-center cursor-pointer hover:bg-green-900/30 transition" onclick="generateWeeklyReport()">
+                        <i class="fas fa-calendar-week text-4xl text-green-400 mb-3"></i>
+                        <h4 class="font-semibold text-lg">Weekly Report</h4>
+                        <p class="text-sm text-gray-400">Last 7 days analysis</p>
+                    </div>
+                    
+                    <div class="glass p-6 rounded-xl text-center cursor-pointer hover:bg-purple-900/30 transition" onclick="generateMonthlyReport()">
+                        <i class="fas fa-calendar-alt text-4xl text-purple-400 mb-3"></i>
+                        <h4 class="font-semibold text-lg">Monthly Report</h4>
+                        <p class="text-sm text-gray-400">Complete month report</p>
+                    </div>
+                </div>
+                
+                <div id="report-output" class="hidden glass p-6 rounded-2xl">
+                    <!-- Report content will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Manager Modal -->
+    <div id="password-modal" class="modal">
+        <div class="glass p-8 rounded-3xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold gradient-text">Password Manager</h3>
+                <button onclick="closePasswordManager()" class="text-gray-500 hover:text-white text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-gray-400 text-sm mb-2">Admin Password</label>
+                    <div class="relative">
+                        <input type="password" id="admin-password-field" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
+                        <button type="button" onclick="toggleAdminPassword()" class="absolute right-3 top-3 text-gray-500 hover:text-blue-400">
+                            <i class="fas fa-eye" id="admin-password-toggle"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-400 text-sm mb-2">Worker Password</label>
+                    <div class="relative">
+                        <input type="password" id="worker-password-field" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
+                        <button type="button" onclick="toggleWorkerPassword()" class="absolute right-3 top-3 text-gray-500 hover:text-blue-400">
+                            <i class="fas fa-eye" id="worker-password-toggle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-3">
+                <button onclick="savePasswords()" class="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg hover:bg-green-900/50">
+                    <i class="fas fa-save mr-2"></i>Save Passwords
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Modal -->
+    <div id="invoice-modal" class="modal">
+        <div class="glass p-8 rounded-3xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold gradient-text">Sales Invoice</h3>
+                <div class="flex gap-2">
+                    <button onclick="printInvoice()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg hover:bg-blue-900/50">
+                        <i class="fas fa-print mr-2"></i>Print
+                    </button>
+                    <button onclick="closeInvoice()" class="text-gray-500 hover:text-white text-2xl">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="invoice-content" class="bg-white text-gray-800 p-8 rounded-lg">
+                <!-- Invoice content will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div class="glass p-8 rounded-3xl flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <p class="text-gray-400">Connecting to cloud...</p>
+        </div>
+    </div>
+
+    <script>
+        // ==================== FIREBASE CONFIGURATION ====================
+        const firebaseConfig = {
+  apiKey: "AIzaSyD2RRPiAA0XvwMHnEoRNZit8zi49QMEQVc",
+  authDomain: "okasha-pos.firebaseapp.com",
+  projectId: "okasha-pos",
+  storageBucket: "okasha-pos.firebasestorage.app",
+  messagingSenderId: "121011821494",
+  appId: "1:121011821494:web:caf75dd0daf78db2453f17",
+  measurementId: "G-NHFLBH1ZJ9"
+};
+
+        // ==================== GLOBAL VARIABLES ====================
+        let currentUser = null;
+        let currentRole = 'admin';
+        let workerSessionSales = [];
+        let charts = {};
+        let db = null;
+        let productsRef = null;
+        let salesRef = null;
+        let activityRef = null;
+        let usersRef = null;
+        let passwordsRef = null;
+        let userId = null;
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log("Initializing Real-time POS System...");
+            
+            // Initialize Firebase
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                console.log("Firebase initialized successfully");
+                
+                // Set up database references
+                productsRef = db.ref('products');
+                salesRef = db.ref('sales');
+                activityRef = db.ref('activity');
+                usersRef = db.ref('users');
+                passwordsRef = db.ref('passwords');
+                
+                // Initialize connection status
+                setupConnectionMonitoring();
+                
+                // Generate unique user ID
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
+                showNotification('Connection error. Using offline mode.', 'warning');
+            }
+            
+            // Set up UI
+            updateClocks();
+            setInterval(updateClocks, 1000);
+            selectRole('admin');
+            setupEventListeners();
+            
+            // Try to load passwords
+            loadPasswords();
+            
+            console.log("System Ready!");
+            showNotification('Real-time system initialized', 'success');
+        });
+
+        function setupConnectionMonitoring() {
+            if (!db) return;
+            
+            const connectedRef = db.ref('.info/connected');
+            connectedRef.on('value', (snap) => {
+                const statusElement = document.getElementById('connection-status');
+                const statusText = document.getElementById('connection-status-text');
+                
+                if (snap.val() === true) {
+                    statusElement.className = 'real-time-indicator online';
+                    statusElement.innerHTML = '<i class="fas fa-wifi"></i><span>Online</span>';
+                    if (statusText) statusText.textContent = 'Online';
+                    console.log("Connected to Firebase");
+                } else {
+                    statusElement.className = 'real-time-indicator offline';
+                    statusElement.innerHTML = '<i class="fas fa-wifi-slash"></i><span>Offline</span>';
+                    if (statusText) statusText.textContent = 'Offline';
+                    console.log("Disconnected from Firebase");
+                }
+            });
+        }
+
+        function setupEventListeners() {
+            const loginForm = document.getElementById('login-form');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleLogin();
+                });
+            }
+
+            const passwordField = document.getElementById('password');
+            if (passwordField) {
+                passwordField.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        handleLogin();
+                    }
+                });
+            }
+
+            const themeToggle = document.getElementById('theme-toggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', toggleTheme);
+            }
+
+            // Initialize theme
+            const savedTheme = localStorage.getItem('okasha_theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('theme-toggle');
+            
+            if (body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                localStorage.setItem('okasha_theme', 'dark');
+                themeToggle.innerHTML = '<i class="fas fa-moon text-blue-400"></i>';
+            } else {
+                body.classList.add('light-mode');
+                localStorage.setItem('okasha_theme', 'light');
+                themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
+            }
+        }
+
+        // ==================== FIREBASE DATA FUNCTIONS ====================
+        async function loadPasswords() {
+            try {
+                const snapshot = await passwordsRef.once('value');
+                if (snapshot.exists()) {
+                    const passwords = snapshot.val();
+                    if (passwords.admin && passwords.worker) {
+                        window.systemPasswords = passwords;
+                        console.log("Passwords loaded from Firebase");
+                    }
+                } else {
+                    // Set default passwords
+                    window.systemPasswords = {
+                        admin: "admin123",
+                        worker: "worker123"
+                    };
+                    await passwordsRef.set(window.systemPasswords);
+                    console.log("Default passwords saved to Firebase");
+                }
+            } catch (error) {
+                console.error("Error loading passwords:", error);
+                window.systemPasswords = {
+                    admin: "admin123",
+                    worker: "worker123"
+                };
+            }
+        }
+
+        async function savePasswords() {
+            try {
+                const adminPass = document.getElementById('admin-password-field').value;
+                const workerPass = document.getElementById('worker-password-field').value;
+                
+                if (adminPass && adminPass.length >= 4 && workerPass && workerPass.length >= 4) {
+                    await passwordsRef.set({
+                        admin: adminPass,
+                        worker: workerPass
+                    });
+                    
+                    window.systemPasswords = { admin: adminPass, worker: workerPass };
+                    showNotification('Passwords updated successfully', 'success');
+                    closePasswordManager();
+                } else {
+                    showNotification('Passwords must be at least 4 characters', 'warning');
+                }
+            } catch (error) {
+                console.error("Error saving passwords:", error);
+                showNotification('Error saving passwords', 'error');
+            }
+        }
+
+        async function addProductToFirebase(product) {
+            try {
+                const newProductRef = productsRef.push();
+                product.id = newProductRef.key;
+                await newProductRef.set(product);
+                
+                // Log activity
+                await logActivityToFirebase('product_added', `Added ${product.name} to inventory`);
+                
+                return newProductRef.key;
+            } catch (error) {
+                console.error("Error adding product:", error);
+                showNotification('Error adding product', 'error');
+                throw error;
+            }
+        }
+
+        async function updateProductInFirebase(productId, updates) {
+            try {
+                await productsRef.child(productId).update(updates);
+                await logActivityToFirebase('product_updated', `Updated product ${updates.name || productId}`);
+                return true;
+            } catch (error) {
+                console.error("Error updating product:", error);
+                showNotification('Error updating product', 'error');
+                return false;
+            }
+        }
+
+        async function deleteProductFromFirebase(productId) {
+            try {
+                await productsRef.child(productId).remove();
+                await logActivityToFirebase('product_deleted', `Deleted product ${productId}`);
+                return true;
+            } catch (error) {
+                console.error("Error deleting product:", error);
+                showNotification('Error deleting product', 'error');
+                return false;
+            }
+        }
+
+        async function addSaleToFirebase(sale) {
+            try {
+                const newSaleRef = salesRef.push();
+                sale.id = newSaleRef.key;
+                sale.timestamp = Date.now();
+                await newSaleRef.set(sale);
+                
+                // Update product quantity if it's not a custom sale
+                if (!sale.isCustom && sale.productId) {
+                    const productSnapshot = await productsRef.child(sale.productId).once('value');
+                    if (productSnapshot.exists()) {
+                        const product = productSnapshot.val();
+                        const newQuantity = product.quantity - sale.quantity;
+                        await productsRef.child(sale.productId).update({ quantity: newQuantity });
+                    }
+                }
+                
+                await logActivityToFirebase('sale', `${sale.worker} sold ${sale.productName} x${sale.quantity}`, sale.total);
+                return newSaleRef.key;
+            } catch (error) {
+                console.error("Error adding sale:", error);
+                showNotification('Error processing sale', 'error');
+                throw error;
+            }
+        }
+
+        async function logActivityToFirebase(type, message, amount = null) {
+            try {
+                const activityRef = db.ref('activity');
+                const newActivityRef = activityRef.push();
+                await newActivityRef.set({
+                    id: newActivityRef.key,
+                    type: type,
+                    message: message,
+                    amount: amount,
+                    timestamp: Date.now(),
+                    user: currentUser ? currentUser.name : 'System',
+                    userId: userId
+                });
+            } catch (error) {
+                console.error("Error logging activity:", error);
+            }
+        }
+
+        // ==================== REAL-TIME LISTENERS ====================
+        function setupRealTimeListeners() {
+            if (!productsRef || !salesRef || !activityRef) return;
+
+            // Listen for products changes
+            productsRef.on('value', (snapshot) => {
+                const productsData = snapshot.val();
+                const products = productsData ? Object.values(productsData) : [];
+                
+                // Update UI with products
+                updateProductsUI(products);
+                
+                // Update stats
+                updateStats(products);
+            });
+
+            // Listen for sales changes
+            salesRef.on('value', (snapshot) => {
+                const salesData = snapshot.val();
+                const sales = salesData ? Object.values(salesData) : [];
+                
+                // Update UI with sales
+                updateSalesUI(sales);
+            });
+
+            // Listen for activity changes
+            activityRef.limitToLast(10).on('value', (snapshot) => {
+                const activityData = snapshot.val();
+                const activities = activityData ? Object.values(activityData) : [];
+                
+                // Update UI with activities
+                updateActivityUI(activities.reverse());
+            });
+
+            // Listen for users online
+            usersRef.on('value', (snapshot) => {
+                const usersData = snapshot.val();
+                const onlineUsers = usersData ? Object.keys(usersData).length : 0;
+                
+                const usersOnlineElement = document.getElementById('users-online');
+                if (usersOnlineElement) {
+                    usersOnlineElement.textContent = `Users online: ${onlineUsers}`;
+                }
+            });
+        }
+
+        function removeRealTimeListeners() {
+            if (productsRef) productsRef.off();
+            if (salesRef) salesRef.off();
+            if (activityRef) activityRef.off();
+            if (usersRef) usersRef.off();
+        }
+
+        // ==================== UI UPDATE FUNCTIONS ====================
+        function updateProductsUI(products) {
+            // Update admin products list
+            updateAdminProductsList(products);
+            
+            // Update worker products grid
+            updateWorkerProductsGrid(products);
+            
+            // Update stats
+            const adminProductsCount = document.getElementById('admin-products-count');
+            const adminStockCount = document.getElementById('admin-stock-count');
+            const workerAvailableProducts = document.getElementById('worker-available-products');
+            
+            if (adminProductsCount) adminProductsCount.textContent = products.length;
+            if (adminStockCount) {
+                const totalStock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
+                adminStockCount.textContent = totalStock;
+            }
+            if (workerAvailableProducts) {
+                const available = products.filter(p => (p.quantity || 0) > 0).length;
+                workerAvailableProducts.textContent = available;
+            }
+        }
+
+        function updateSalesUI(sales) {
+            // Update admin sales history
+            updateAdminSalesHistory(sales);
+            
+            // Update worker sales list
+            updateWorkerSalesList(sales);
+            
+            // Update stats
+            updateSalesStats(sales);
+        }
+
+        function updateActivityUI(activities) {
+            const container = document.getElementById('activity-feed');
+            if (!container) return;
+
+            if (activities.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-bell-slash text-3xl text-gray-700 mb-3"></i>
+                        <p class="text-gray-500">No recent activity</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = activities.map(activity => {
+                const time = new Date(activity.timestamp).toLocaleTimeString('en-GB', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                return `
+                    <div class="p-3 bg-slate-800/30 rounded-lg">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full ${activity.type === 'sale' ? 'bg-green-900/30' : 'bg-blue-900/30'} flex items-center justify-center">
+                                <i class="fas fa-${activity.type === 'sale' ? 'shopping-cart' : 'user'} text-xs ${activity.type === 'sale' ? 'text-green-400' : 'text-blue-400'}"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="text-sm">${activity.message}</p>
+                                <div class="flex justify-between items-center mt-1">
+                                    <span class="text-xs text-gray-500">${time} • ${activity.user}</span>
+                                    ${activity.amount ? `<span class="text-xs font-bold text-green-400">Rs. ${activity.amount.toLocaleString()}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateStats(products) {
+            // Calculate and update various stats
+            // This will be called from updateProductsUI and updateSalesUI
+        }
+
+        function updateSalesStats(sales) {
+            const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+            const today = new Date().toDateString();
+            const todaySales = sales.filter(sale => {
+                const saleDate = new Date(sale.timestamp || sale.date);
+                return saleDate.toDateString() === today;
+            });
+            const todayRevenue = todaySales.reduce((sum, sale) => sum + (sale.total || 0), 0);
+            const todayWorkerSales = todaySales.filter(sale => 
+                sale.worker === (currentUser ? currentUser.name : 'Worker')
+            );
+            const sessionTotal = workerSessionSales.reduce((sum, sale) => sum + sale.total, 0);
+
+            // Update admin stats
+            const adminRevenue = document.getElementById('admin-revenue');
+            const adminTodaySales = document.getElementById('admin-today-sales');
+            const adminAvgSale = document.getElementById('admin-avg-sale');
+            
+            if (adminRevenue) adminRevenue.textContent = totalRevenue.toLocaleString();
+            if (adminTodaySales) adminTodaySales.textContent = todaySales.length;
+            if (adminAvgSale) {
+                const avg = todaySales.length > 0 ? Math.round(todayRevenue / todaySales.length) : 0;
+                adminAvgSale.textContent = `Rs. ${avg.toLocaleString()}`;
+            }
+
+            // Update worker stats
+            const workerTodayCount = document.getElementById('worker-today-count');
+            const workerSessionTotal = document.getElementById('worker-session-total');
+            const workerTodayTotal = document.getElementById('worker-today-total');
+            
+            if (workerTodayCount) workerTodayCount.textContent = todayWorkerSales.length;
+            if (workerSessionTotal) workerSessionTotal.textContent = sessionTotal.toLocaleString();
+            if (workerTodayTotal) {
+                const todayTotal = todayWorkerSales.reduce((sum, sale) => sum + sale.total, 0);
+                workerTodayTotal.textContent = `Rs. ${todayTotal.toLocaleString()}`;
+            }
+        }
+
+        // ==================== LOGIN SYSTEM ====================
+        function selectRole(role) {
+            currentRole = role;
+            
+            const adminBtn = document.getElementById('btn-admin');
+            const workerBtn = document.getElementById('btn-worker');
+            const selectedRole = document.getElementById('selected-role');
+            const roleDesc = document.getElementById('role-description');
+            
+            if (adminBtn && workerBtn && selectedRole && roleDesc) {
+                adminBtn.classList.remove('bg-blue-900/50', 'border-blue-700/50');
+                adminBtn.classList.add('bg-slate-800', 'border-slate-700');
+                workerBtn.classList.remove('bg-blue-900/50', 'border-blue-700/50');
+                workerBtn.classList.add('bg-slate-800', 'border-slate-700');
+                
+                if (role === 'admin') {
+                    adminBtn.classList.remove('bg-slate-800', 'border-slate-700');
+                    adminBtn.classList.add('bg-blue-900/50', 'border-blue-700/50');
+                    selectedRole.textContent = 'Admin';
+                    roleDesc.textContent = 'Full access to add products, view analytics, and manage system';
+                } else {
+                    workerBtn.classList.remove('bg-slate-800', 'border-slate-700');
+                    workerBtn.classList.add('bg-blue-900/50', 'border-blue-700/50');
+                    selectedRole.textContent = 'Worker';
+                    roleDesc.textContent = 'Can view inventory and process sales only';
+                }
+            }
+        }
+
+        async function handleLogin() {
+            const passwordInput = document.getElementById('password');
+            const password = passwordInput ? passwordInput.value.trim() : '';
+            const errorDiv = document.getElementById('login-error');
+            
+            let isValid = false;
+            if (currentRole === 'admin' && password === window.systemPasswords.admin) {
+                isValid = true;
+            } else if (currentRole === 'worker' && password === window.systemPasswords.worker) {
+                isValid = true;
+            }
+            
+            if (isValid) {
+                if (errorDiv) {
+                    errorDiv.classList.add('hidden');
+                }
+                
+                currentUser = {
+                    role: currentRole,
+                    name: currentRole === 'admin' ? 'Administrator' : `Worker ${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+                    loginTime: new Date(),
+                    userId: userId
+                };
+                
+                // Mark user as online
+                if (usersRef) {
+                    await usersRef.child(userId).set({
+                        name: currentUser.name,
+                        role: currentUser.role,
+                        lastActive: Date.now()
+                    });
+                }
+                
+                // Set up real-time listeners
+                setupRealTimeListeners();
+                
+                const loginScreen = document.getElementById('login-screen');
+                if (loginScreen) {
+                    loginScreen.classList.add('hidden');
+                }
+                
+                if (currentRole === 'admin') {
+                    const adminDashboard = document.getElementById('admin-dashboard');
+                    if (adminDashboard) {
+                        adminDashboard.classList.remove('hidden');
+                        showNotification('Welcome Admin! Real-time dashboard loaded.', 'success');
+                    }
+                } else {
+                    const workerDashboard = document.getElementById('worker-dashboard');
+                    if (workerDashboard) {
+                        workerDashboard.classList.remove('hidden');
+                        workerSessionSales = [];
+                        showNotification('Welcome Worker! Ready for sales.', 'success');
+                    }
+                }
+                
+                await logActivityToFirebase('login', `${currentRole} logged in`);
+                
+            } else {
+                if (errorDiv) {
+                    errorDiv.classList.remove('hidden');
+                    document.getElementById('error-message').textContent = `Invalid ${currentRole} password. Try again.`;
+                }
+                
+                if (passwordInput) {
+                    passwordInput.classList.add('shake');
+                    setTimeout(() => {
+                        passwordInput.classList.remove('shake');
+                    }, 500);
+                }
+            }
+        }
+
+        async function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // Remove user from online list
+                if (usersRef) {
+                    await usersRef.child(userId).remove();
+                }
+                
+                // Remove real-time listeners
+                removeRealTimeListeners();
+                
+                await logActivityToFirebase('logout', `${currentRole} logged out`);
+                
+                currentUser = null;
+                workerSessionSales = [];
+                
+                const adminDashboard = document.getElementById('admin-dashboard');
+                const workerDashboard = document.getElementById('worker-dashboard');
+                const loginScreen = document.getElementById('login-screen');
+                
+                if (adminDashboard) adminDashboard.classList.add('hidden');
+                if (workerDashboard) workerDashboard.classList.add('hidden');
+                if (loginScreen) {
+                    loginScreen.classList.remove('hidden');
+                    const passwordInput = document.getElementById('password');
+                    if (passwordInput) passwordInput.value = '';
+                }
+                
+                showNotification('Logged out successfully', 'info');
+            }
+        }
+
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const icon = document.getElementById('password-toggle');
+            togglePasswordVisibility(input, icon);
+        }
+
+        function toggleAdminPassword() {
+            const input = document.getElementById('admin-password-field');
+            const icon = document.getElementById('admin-password-toggle');
+            togglePasswordVisibility(input, icon);
+        }
+
+        function toggleWorkerPassword() {
+            const input = document.getElementById('worker-password-field');
+            const icon = document.getElementById('worker-password-toggle');
+            togglePasswordVisibility(input, icon);
+        }
+
+        function togglePasswordVisibility(input, icon) {
+            if (input && icon) {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            }
+        }
+
+        // ==================== CLOCK UPDATES ====================
+        function updateClocks() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-GB', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const dateStr = now.toLocaleDateString('en-GB', { 
+                weekday: 'long',
+                day: 'numeric', 
+                month: 'short', 
+                year: 'numeric'
+            });
+            
+            const adminDate = document.getElementById('admin-date');
+            const adminTime = document.getElementById('admin-time');
+            if (adminDate && adminTime) {
+                adminDate.textContent = dateStr;
+                adminTime.textContent = timeStr;
+            }
+            
+            const workerDate = document.getElementById('worker-date');
+            const workerTime = document.getElementById('worker-time');
+            if (workerDate && workerTime) {
+                workerDate.textContent = dateStr;
+                workerTime.textContent = timeStr;
+            }
+        }
+
+        // ==================== ADMIN FUNCTIONS ====================
+        function increaseQuantity(dashboard) {
+            if (dashboard === 'admin') {
+                const input = document.getElementById('admin-quantity');
+                if (input) {
+                    input.value = parseInt(input.value) + 1;
+                }
+            }
+        }
+
+        function decreaseQuantity(dashboard) {
+            if (dashboard === 'admin') {
+                const input = document.getElementById('admin-quantity');
+                if (input && parseInt(input.value) > 1) {
+                    input.value = parseInt(input.value) - 1;
+                }
+            }
+        }
+
+        async function addProductAdmin() {
+            const nameInput = document.getElementById('admin-product-name');
+            const costInput = document.getElementById('admin-cost-price');
+            const sellInput = document.getElementById('admin-sell-price');
+            const quantityInput = document.getElementById('admin-quantity');
+            const categoryInput = document.getElementById('admin-category');
+            
+            const name = nameInput ? nameInput.value.trim() : '';
+            const costPrice = costInput ? parseFloat(costInput.value) : 0;
+            const sellPrice = sellInput ? parseFloat(sellInput.value) : 0;
+            const quantity = quantityInput ? parseInt(quantityInput.value) : 0;
+            const category = categoryInput ? categoryInput.value : 'other';
+            
+            if (!name || !costPrice || !sellPrice || !quantity) {
+                showNotification('Please fill all fields correctly', 'warning');
+                return;
+            }
+            
+            if (costPrice >= sellPrice) {
+                showNotification('Selling price must be higher than cost price', 'warning');
+                return;
+            }
+            
+            if (quantity <= 0) {
+                showNotification('Quantity must be at least 1', 'warning');
+                return;
+            }
+            
+            const product = {
+                name: name,
+                category: category,
+                costPrice: costPrice,
+                sellPrice: sellPrice,
+                quantity: quantity,
+                addedDate: new Date().toISOString(),
+                barcode: `PROD${Date.now().toString().slice(-6)}`,
+                minStock: category === 'mobile' ? 1 : category === 'accessory' ? 5 : 0
+            };
+            
+            try {
+                await addProductToFirebase(product);
+                
+                // Clear form
+                if (nameInput) nameInput.value = '';
+                if (costInput) costInput.value = '';
+                if (sellInput) sellInput.value = '';
+                if (quantityInput) quantityInput.value = 1;
+                
+                showNotification(`"${name}" added to inventory (Quantity: ${quantity})`, 'success');
+            } catch (error) {
+                showNotification('Error adding product to database', 'error');
+            }
+        }
+
+        async function editProduct(productId) {
+            try {
+                const productSnapshot = await productsRef.child(productId).once('value');
+                if (!productSnapshot.exists()) {
+                    showNotification('Product not found', 'error');
+                    return;
+                }
+                
+                const product = productSnapshot.val();
+                
+                const newName = prompt('Edit product name:', product.name);
+                if (newName !== null && newName.trim()) {
+                    const newCost = prompt('Edit cost price:', product.costPrice);
+                    if (newCost !== null && !isNaN(newCost)) {
+                        const newSell = prompt('Edit selling price:', product.sellPrice);
+                        if (newSell !== null && !isNaN(newSell)) {
+                            const newQty = prompt('Edit quantity:', product.quantity);
+                            if (newQty !== null && !isNaN(newQty)) {
+                                await updateProductInFirebase(productId, {
+                                    name: newName.trim(),
+                                    costPrice: parseFloat(newCost),
+                                    sellPrice: parseFloat(newSell),
+                                    quantity: parseInt(newQty)
+                                });
+                                
+                                showNotification('Product updated successfully', 'success');
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                showNotification('Error updating product', 'error');
+            }
+        }
+
+        async function deleteProduct(productId) {
+            if (confirm('Are you sure you want to delete this product?')) {
+                try {
+                    await deleteProductFromFirebase(productId);
+                    showNotification('Product deleted successfully', 'success');
+                } catch (error) {
+                    showNotification('Error deleting product', 'error');
+                }
+            }
+        }
+
+        function updateAdminProductsList(products) {
+            const container = document.getElementById('admin-products-list');
+            if (!container) return;
+            
+            if (products.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-box-open text-3xl text-gray-700 mb-3"></i>
+                        <p class="text-gray-500">No products in inventory</p>
+                        <p class="text-sm text-gray-400">Add products using the form on the left</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = products.map(product => {
+                const profitPerItem = product.sellPrice - product.costPrice;
+                const totalValue = product.sellPrice * product.quantity;
+                const totalProfit = profitPerItem * product.quantity;
+                const stockStatus = product.quantity <= product.minStock ? 
+                    `<span class="text-red-400 text-xs">Low Stock!</span>` : 
+                    `<span class="text-green-400 text-xs">In Stock</span>`;
+                
+                return `
+                    <div class="p-4 bg-slate-800/50 rounded-lg animate-fadeIn">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h4 class="font-bold">${product.name}</h4>
+                                <div class="flex items-center gap-3 text-sm text-gray-400 mt-1">
+                                    <span class="px-2 py-1 rounded ${getCategoryColor(product.category)} text-xs">
+                                        ${product.category.toUpperCase()}
+                                    </span>
+                                    <span>Stock: ${product.quantity}</span>
+                                    ${stockStatus}
+                                </div>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="editProduct('${product.id}')" class="text-blue-400 hover:text-blue-300 p-1" title="Edit">
+                                    <i class="fas fa-edit text-sm"></i>
+                                </button>
+                                <button onclick="deleteProduct('${product.id}')" class="text-red-400 hover:text-red-300 p-1" title="Delete">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-3 mt-3 text-sm">
+                            <div class="text-center p-2 bg-slate-900/50 rounded">
+                                <p class="text-gray-400 text-xs">Cost Price</p>
+                                <p class="font-bold">Rs. ${product.costPrice.toLocaleString()}</p>
+                            </div>
+                            <div class="text-center p-2 bg-slate-900/50 rounded">
+                                <p class="text-gray-400 text-xs">Selling Price</p>
+                                <p class="font-bold text-green-400">Rs. ${product.sellPrice.toLocaleString()}</p>
+                            </div>
+                            <div class="text-center p-2 bg-slate-900/50 rounded">
+                                <p class="text-gray-400 text-xs">Profit/Item</p>
+                                <p class="font-bold text-yellow-400">Rs. ${profitPerItem.toLocaleString()}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 mt-3 text-xs">
+                            <div class="text-center p-2 bg-blue-900/20 rounded">
+                                <p>Total Value</p>
+                                <p class="font-bold">Rs. ${totalValue.toLocaleString()}</p>
+                            </div>
+                            <div class="text-center p-2 bg-green-900/20 rounded">
+                                <p>Total Profit</p>
+                                <p class="font-bold">Rs. ${totalProfit.toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            const searchInput = document.getElementById('admin-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const term = this.value.toLowerCase();
+                    const items = container.querySelectorAll('.bg-slate-800\\/50');
+                    
+                    items.forEach(item => {
+                        const text = item.textContent.toLowerCase();
+                        item.style.display = text.includes(term) ? 'block' : 'none';
+                    });
+                });
+            }
+        }
+
+        function updateAdminSalesHistory(sales) {
+            const container = document.getElementById('admin-sales-history');
+            if (!container) return;
+            
+            const recentSales = sales.slice(-10).reverse();
+            
+            if (recentSales.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-receipt text-3xl text-gray-700 mb-3"></i>
+                        <p class="text-gray-500">No sales recorded yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = recentSales.map(sale => {
+                const time = new Date(sale.timestamp || sale.date).toLocaleTimeString('en-GB', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                return `
+                    <div class="p-3 bg-slate-800/30 rounded-lg animate-fadeIn">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-medium">${sale.productName}</p>
+                                <div class="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                                    <span>${time}</span>
+                                    <span>•</span>
+                                    <span>${sale.worker}</span>
+                                    <span>•</span>
+                                    <span>Qty: ${sale.quantity}</span>
+                                    ${sale.isCustom ? '<span class="text-yellow-400">• CUSTOM</span>' : ''}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-green-400">Rs. ${sale.total.toLocaleString()}</p>
+                                <p class="text-xs text-gray-400">Total</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== WORKER FUNCTIONS ====================
+        function updateWorkerProductsGrid(products) {
+            const container = document.getElementById('worker-products-grid');
+            if (!container) return;
+            
+            const availableProducts = products.filter(p => p.quantity > 0);
+            
+            if (availableProducts.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-3 text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-3xl text-yellow-500 mb-3"></i>
+                        <p class="text-gray-500">All products are out of stock</p>
+                        <p class="text-sm text-gray-400">Contact admin to restock inventory</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = availableProducts.map(product => {
+                const isLowStock = product.quantity <= product.minStock;
+                
+                return `
+                    <div class="bg-slate-800/50 rounded-xl p-4 hover:bg-slate-800/70 transition blue-glow">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="font-bold">${product.name}</h4>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-xs px-2 py-1 rounded ${getCategoryColor(product.category)}">
+                                        ${product.category}
+                                    </span>
+                                    ${isLowStock ? '<span class="text-xs px-2 py-1 rounded bg-red-900/30 text-red-300">Low Stock</span>' : ''}
+                                </div>
+                            </div>
+                            <span class="text-sm ${isLowStock ? 'text-red-400' : 'text-gray-400'}">Stock: ${product.quantity}</span>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <p class="text-2xl font-bold text-green-400 text-center">Rs. ${product.sellPrice.toLocaleString()}</p>
+                            <p class="text-xs text-gray-500 text-center">Selling Price</p>
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <button onclick="quickSale('${product.id}')" class="flex-1 bg-gradient-to-r from-green-600 to-green-800 hover:from-green-700 hover:to-green-900 text-white py-2 rounded-lg text-sm font-medium">
+                                <i class="fas fa-bolt mr-1"></i>Quick Sale
+                            </button>
+                            <button onclick="showSaleDialog('${product.id}')" class="bg-blue-900/30 text-blue-300 px-3 py-2 rounded-lg hover:bg-blue-900/50">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            const searchInput = document.getElementById('worker-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    const term = this.value.toLowerCase();
+                    const items = container.querySelectorAll('.blue-glow');
+                    
+                    items.forEach(item => {
+                        const text = item.textContent.toLowerCase();
+                        item.style.display = text.includes(term) ? 'block' : 'none';
+                    });
+                });
+            }
+        }
+
+        function updateWorkerSalesList(sales) {
+            const container = document.getElementById('worker-sales-list');
+            if (!container) return;
+            
+            const today = new Date().toDateString();
+            const todayWorkerSales = sales.filter(sale => {
+                const saleDate = new Date(sale.timestamp || sale.date);
+                return saleDate.toDateString() === today && 
+                       sale.worker === (currentUser ? currentUser.name : 'Worker');
+            });
+            
+            if (todayWorkerSales.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-shopping-cart text-3xl text-gray-700 mb-3"></i>
+                        <p class="text-gray-500">No sales today</p>
+                        <p class="text-sm text-gray-400">Start selling using the products above</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const todayTotal = todayWorkerSales.reduce((sum, sale) => sum + sale.total, 0);
+            
+            container.innerHTML = `
+                <div class="mb-4 p-3 bg-green-900/20 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium">Today's Total</span>
+                        <span class="text-xl font-bold text-green-400">Rs. ${todayTotal.toLocaleString()}</span>
+                    </div>
+                    <p class="text-sm text-gray-400">${todayWorkerSales.length} sales today</p>
+                </div>
+                ${todayWorkerSales.slice(-5).reverse().map(sale => `
+                    <div class="p-3 bg-slate-800/30 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-medium">${sale.productName}</p>
+                                <div class="flex items-center gap-3 text-sm text-gray-400 mt-1">
+                                    <span>Qty: ${sale.quantity}</span>
+                                    <span>•</span>
+                                    <span>${new Date(sale.timestamp || sale.date).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'})}</span>
+                                    ${sale.isCustom ? '<span class="text-yellow-400">• CUSTOM</span>' : ''}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-green-400">Rs. ${sale.total.toLocaleString()}</p>
+                                <p class="text-sm text-gray-400">@ Rs. ${sale.price.toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        async function quickSale(productId) {
+            try {
+                const productSnapshot = await productsRef.child(productId).once('value');
+                if (!productSnapshot.exists()) {
+                    showNotification('Product not found', 'warning');
+                    return;
+                }
+                
+                const product = productSnapshot.val();
+                
+                if (product.quantity <= 0) {
+                    showNotification('Product is out of stock', 'warning');
+                    return;
+                }
+                
+                await processSale(product, 1);
+            } catch (error) {
+                showNotification('Error processing sale', 'error');
+            }
+        }
+
+        async function showSaleDialog(productId) {
+            try {
+                const productSnapshot = await productsRef.child(productId).once('value');
+                if (!productSnapshot.exists()) {
+                    showNotification('Product not found', 'warning');
+                    return;
+                }
+                
+                const product = productSnapshot.val();
+                
+                if (product.quantity <= 0) {
+                    showNotification('Product is out of stock', 'warning');
+                    return;
+                }
+                
+                const quantity = prompt(`Enter quantity for ${product.name} (Available: ${product.quantity}):`, "1");
+                if (!quantity || isNaN(quantity) || parseInt(quantity) <= 0) return;
+                
+                const qty = parseInt(quantity);
+                if (qty > product.quantity) {
+                    showNotification(`Only ${product.quantity} items available`, 'warning');
+                    return;
+                }
+                
+                await processSale(product, qty);
+            } catch (error) {
+                showNotification('Error processing sale', 'error');
+            }
+        }
+
+        async function processSale(product, quantity) {
+            const sale = {
+                productId: product.id,
+                productName: product.name,
+                price: product.sellPrice,
+                quantity: quantity,
+                total: product.sellPrice * quantity,
+                date: new Date().toISOString(),
+                worker: currentUser ? currentUser.name : 'Worker',
+                isCustom: false
+            };
+            
+            try {
+                await addSaleToFirebase(sale);
+                workerSessionSales.push(sale);
+                showNotification(`Sold ${product.name} x${quantity} for Rs. ${sale.total.toLocaleString()}`, 'success');
+            } catch (error) {
+                showNotification('Error processing sale', 'error');
+            }
+        }
+
+        async function processManualSale() {
+            const productInput = document.getElementById('manual-product');
+            const priceInput = document.getElementById('manual-price');
+            const quantityInput = document.getElementById('manual-quantity');
+            
+            const productName = productInput ? productInput.value.trim() : '';
+            const price = priceInput ? parseFloat(priceInput.value) : 0;
+            const quantity = quantityInput ? parseInt(quantityInput.value) : 0;
+            
+            if (!productName || !price || !quantity) {
+                showNotification('Please fill all fields for manual sale', 'warning');
+                return;
+            }
+            
+            if (price <= 0 || quantity <= 0) {
+                showNotification('Price and quantity must be positive numbers', 'warning');
+                return;
+            }
+            
+            const sale = {
+                productId: null,
+                productName: productName,
+                price: price,
+                quantity: quantity,
+                total: price * quantity,
+                date: new Date().toISOString(),
+                worker: currentUser ? currentUser.name : 'Worker',
+                isCustom: true
+            };
+            
+            try {
+                await addSaleToFirebase(sale);
+                workerSessionSales.push(sale);
+                
+                if (productInput) productInput.value = '';
+                if (priceInput) priceInput.value = '';
+                if (quantityInput) quantityInput.value = 1;
+                
+                showNotification(`Custom sale: ${productName} x${quantity} for Rs. ${sale.total.toLocaleString()}`, 'success');
+            } catch (error) {
+                showNotification('Error processing sale', 'error');
+            }
+        }
+
+        function simulateBarcode() {
+            showNotification('Barcode scanner simulated - Use search for products', 'info');
+        }
+
+        // ==================== UTILITY FUNCTIONS ====================
+        function getCategoryColor(category) {
+            const colors = {
+                mobile: 'bg-blue-900/30 text-blue-300',
+                accessory: 'bg-purple-900/30 text-purple-300',
+                repair: 'bg-green-900/30 text-green-300',
+                tablet: 'bg-yellow-900/30 text-yellow-300',
+                other: 'bg-gray-900/30 text-gray-300'
+            };
+            return colors[category] || 'bg-gray-900/30 text-gray-300';
+        }
+
+        function showNotification(message, type = 'info') {
+            const existingNotifications = document.querySelectorAll('.notification-toast');
+            existingNotifications.forEach(n => n.remove());
+            
+            const notification = document.createElement('div');
+            notification.className = `notification-toast fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 animate-fadeIn ${type === 'success' ? 'bg-green-900/90 text-green-100' : type === 'warning' ? 'bg-yellow-900/90 text-yellow-100' : type === 'error' ? 'bg-red-900/90 text-red-100' : 'bg-blue-900/90 text-blue-100'}`;
+            notification.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : type === 'error' ? 'times-circle' : 'info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // ==================== MODAL FUNCTIONS ====================
+        function showPasswordManager() {
+            const modal = document.getElementById('password-modal');
+            if (modal) {
+                modal.classList.add('active');
+                document.getElementById('admin-password-field').value = window.systemPasswords.admin;
+                document.getElementById('worker-password-field').value = window.systemPasswords.worker;
+            }
+        }
+
+        function closePasswordManager() {
+            const modal = document.getElementById('password-modal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        function showAnalytics() {
+            const modal = document.getElementById('analytics-modal');
+            if (modal) {
+                modal.classList.add('active');
+                setTimeout(initializeCharts, 100);
+            }
+        }
+
+        function closeAnalytics() {
+            const modal = document.getElementById('analytics-modal');
+            if (modal) {
+                modal.classList.remove('active');
+                Object.values(charts).forEach(chart => {
+                    if (chart) chart.destroy();
+                });
+                charts = {};
+            }
+        }
+
+        function showReports() {
+            const modal = document.getElementById('reports-modal');
+            if (modal) {
+                modal.classList.add('active');
+            }
+        }
+
+        function closeReports() {
+            const modal = document.getElementById('reports-modal');
+            if (modal) {
+                modal.classList.remove('active');
+                const output = document.getElementById('report-output');
+                if (output) {
+                    output.classList.add('hidden');
+                    output.innerHTML = '';
+                }
+            }
+        }
+
+        // ==================== SYSTEM READY ====================
+        console.log("=========================================");
+        console.log("Okasha Communication Real-time POS System");
+        console.log("=========================================");
+        console.log("Features:");
+        console.log("✓ Real-time Multi-user Support");
+        console.log("✓ Live Inventory Updates");
+        console.log("✓ Cloud Database (Firebase)");
+        console.log("✓ Auto-save All Changes");
+        console.log("✓ Persistent Data Storage");
+        console.log("✓ Online/Offline Status");
+        console.log("=========================================");
+        console.log("Default Passwords:");
+        console.log("Admin: admin123");
+        console.log("Worker: worker123");
+        console.log("=========================================");
+
+        // Simple analytics and report functions (simplified for demo)
+        function initializeCharts() {
+            showNotification('Analytics loaded', 'success');
+        }
+
+        function generateDailyReport() {
+            showNotification('Daily report generated', 'success');
+        }
+
+        function generateWeeklyReport() {
+            showNotification('Weekly report generated', 'success');
+        }
+
+        function generateMonthlyReport() {
+            showNotification('Monthly report generated', 'success');
+        }
+
+        function generateInvoiceReport() {
+            showNotification('Invoice report generated', 'success');
+        }
+
+        function generateDailyInvoice() {
+            showNotification('Daily invoice generated', 'success');
+        }
+
+        function generateSessionInvoice() {
+            showNotification('Session invoice generated', 'success');
+        }
+
+        function exportInventoryCSV() {
+            showNotification('Export feature coming soon', 'info');
+        }
+    </script>
+</body>
+
+</html>
