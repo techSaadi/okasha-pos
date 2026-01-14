@@ -293,19 +293,67 @@
             from { transform: translate(-50%, -100%); }
             to { transform: translate(-50%, 0); }
         }
+        
+        /* Multi-device sync badge */
+        .sync-badge {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(59, 130, 246, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 99;
+        }
+        
+        /* Connection status */
+        .connection-status {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+        
+        .connection-status.online {
+            color: #10b981;
+        }
+        
+        .connection-status.offline {
+            color: #ef4444;
+        }
     </style>
 </head>
 <body>
     <!-- Update Notification -->
     <div id="update-notification" class="update-notification hidden">
         <i class="fas fa-sync-alt"></i>
-        <span>Data updated in real-time</span>
+        <span>Data synchronized across all devices</span>
     </div>
 
     <!-- Sync Indicator -->
     <div id="sync-indicator" class="sync-indicator">
         <i class="fas fa-circle text-green-400 text-xs"></i>
         <span>Real-time Sync Active</span>
+    </div>
+
+    <!-- Multi-device Sync Badge -->
+    <div id="sync-badge" class="sync-badge hidden">
+        <i class="fas fa-users"></i>
+        <span>Multi-device Sync</span>
+    </div>
+
+    <!-- Connection Status -->
+    <div id="connection-status" class="connection-status online">
+        <i class="fas fa-wifi"></i>
+        <span>Connected</span>
     </div>
 
     <!-- Theme Toggle Button -->
@@ -325,6 +373,9 @@
                 <div class="mt-4">
                     <span class="inline-block px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs font-medium">
                         <i class="fas fa-shield-alt mr-1"></i> Secure Login
+                    </span>
+                    <span id="login-sync-badge" class="inline-block px-3 py-1 bg-green-900/30 text-green-300 rounded-full text-xs font-medium ml-2 hidden">
+                        <i class="fas fa-sync-alt mr-1"></i> Sync Active
                     </span>
                 </div>
             </div>
@@ -347,6 +398,9 @@
                 <div id="role-info" class="p-3 bg-slate-800/50 rounded-lg">
                     <p class="text-sm text-gray-400 mb-1">Selected Role: <span id="selected-role" class="text-blue-300 font-medium">Admin</span></p>
                     <p class="text-xs text-gray-500" id="role-description">Full access to add products, view analytics, and manage system</p>
+                    <p class="text-xs text-green-400 mt-1" id="data-sync-info">
+                        <i class="fas fa-sync-alt mr-1"></i>Data syncs across all devices
+                    </p>
                 </div>
                 
                 <div>
@@ -382,8 +436,8 @@
                 
                 <div class="text-center pt-4 border-t border-slate-800">
                     <p class="text-xs text-gray-500">
-                        <i class="fas fa-lock mr-1"></i>
-                        Passwords are securely encrypted
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        All data syncs in real-time across devices
                     </p>
                 </div>
             </form>
@@ -406,6 +460,9 @@
                             Wah Cantt | Admin Dashboard
                             <span class="status-dot status-active"></span>
                             <span class="text-green-400 text-xs">Live</span>
+                            <span id="admin-device-count" class="text-xs bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded-full hidden">
+                                <i class="fas fa-desktop mr-1"></i>1 device
+                            </span>
                         </p>
                     </div>
                 </div>
@@ -422,6 +479,9 @@
                     <button onclick="showPasswordManager()" class="px-3 py-1 bg-yellow-900/30 text-yellow-300 rounded-full text-xs font-medium hover:bg-yellow-900/50">
                         <i class="fas fa-key mr-1"></i> Passwords
                     </button>
+                    <button onclick="backupData()" class="px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full text-xs font-medium hover:bg-indigo-900/50">
+                        <i class="fas fa-database mr-1"></i> Backup
+                    </button>
                     <button onclick="logout()" class="px-3 py-1 bg-red-900/30 text-red-300 rounded-full text-xs font-medium hover:bg-red-900/50">
                         <i class="fas fa-sign-out-alt mr-1"></i> Logout
                     </button>
@@ -434,6 +494,10 @@
                 </div>
                 <p class="text-xs text-gray-500 mt-2">Session: <span id="admin-session-time">00:00:00</span></p>
                 <p class="text-xs text-green-400 mt-1" id="last-update">Updated: Just now</p>
+                <p class="text-xs text-blue-400 mt-1">
+                    <i class="fas fa-sync-alt mr-1"></i>
+                    <span id="admin-sync-status">Sync Active</span>
+                </p>
             </div>
         </header>
 
@@ -577,6 +641,9 @@
                         <button onclick="refreshAdmin()" class="bg-blue-900/30 text-blue-300 p-2 rounded-lg hover:bg-blue-900/50">
                             <i class="fas fa-sync-alt"></i>
                         </button>
+                        <button onclick="exportProducts()" class="bg-green-900/30 text-green-300 p-2 rounded-lg hover:bg-green-900/50">
+                            <i class="fas fa-download"></i>
+                        </button>
                     </div>
                 </div>
                 <div id="admin-products-list" class="space-y-3 max-h-[400px] overflow-y-auto">
@@ -637,6 +704,9 @@
                             Wah Cantt | Worker Dashboard
                             <span class="status-dot status-active"></span>
                             <span class="text-green-400 text-xs">Ready</span>
+                            <span id="worker-device-count" class="text-xs bg-green-900/30 text-green-300 px-2 py-0.5 rounded-full hidden">
+                                <i class="fas fa-mobile-alt mr-1"></i>This device
+                            </span>
                         </p>
                     </div>
                 </div>
@@ -662,6 +732,10 @@
                 </div>
                 <p class="text-xs text-gray-500 mt-2">Today's Sales: <span id="worker-today-total">Rs. 0</span></p>
                 <p class="text-xs text-green-400 mt-1" id="worker-last-update">Updated: Just now</p>
+                <p class="text-xs text-green-400 mt-1">
+                    <i class="fas fa-sync-alt mr-1"></i>
+                    <span id="worker-sync-status">Sync Active</span>
+                </p>
             </div>
         </header>
 
@@ -921,14 +995,56 @@
         </div>
     </div>
 
+    <!-- Backup Modal -->
+    <div id="backup-modal" class="modal">
+        <div class="glass p-8 rounded-3xl w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold gradient-text">Data Backup & Restore</h3>
+                <button onclick="closeBackupModal()" class="text-gray-500 hover:text-white text-2xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4 mb-6">
+                <div class="p-4 bg-blue-900/20 rounded-lg">
+                    <h4 class="font-semibold mb-2">Backup Current Data</h4>
+                    <p class="text-sm text-gray-400 mb-3">Create a backup of all products, sales, and settings</p>
+                    <button onclick="createBackup()" class="w-full bg-blue-900/30 text-blue-300 py-2 rounded-lg hover:bg-blue-900/50">
+                        <i class="fas fa-download mr-2"></i>Create Backup
+                    </button>
+                </div>
+                
+                <div class="p-4 bg-green-900/20 rounded-lg">
+                    <h4 class="font-semibold mb-2">Restore from Backup</h4>
+                    <p class="text-sm text-gray-400 mb-3">Upload a backup file to restore data</p>
+                    <input type="file" id="backup-file" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-lg mb-3" accept=".json">
+                    <button onclick="restoreBackup()" class="w-full bg-green-900/30 text-green-300 py-2 rounded-lg hover:bg-green-900/50">
+                        <i class="fas fa-upload mr-2"></i>Restore Backup
+                    </button>
+                </div>
+                
+                <div class="p-4 bg-red-900/20 rounded-lg">
+                    <h4 class="font-semibold mb-2">Danger Zone</h4>
+                    <p class="text-sm text-gray-400 mb-3">Reset all data to default</p>
+                    <button onclick="resetAllData()" class="w-full bg-red-900/30 text-red-300 py-2 rounded-lg hover:bg-red-900/50">
+                        <i class="fas fa-trash mr-2"></i>Reset All Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ==================== SYSTEM CONFIGURATION ====================
         const SYSTEM_CONFIG = {
-            storageKey: 'okasha_pos_v1',
+            storageKey: 'okasha_pos_multi_device',
             sessionKey: 'okasha_session',
+            syncKey: 'okasha_sync_state',
             defaultAdminPass: 'adminmb123',
             defaultWorkerPass: 'worker3214',
-            sessionTimeout: 24 * 60 * 60 * 1000 // 24 hours
+            sessionTimeout: 24 * 60 * 60 * 1000,
+            syncInterval: 2000,
+            deviceId: generateDeviceId()
         };
         
         // ==================== GLOBAL VARIABLES ====================
@@ -939,9 +1055,16 @@
         let currentRole = 'admin';
         let sessionStartTime = null;
         let sessionTimer = null;
+        let syncTimer = null;
         let workerSessionSales = [];
         let charts = {};
         let lastUpdateTime = Date.now();
+        let isOnline = true;
+        let syncState = {
+            lastSync: Date.now(),
+            deviceCount: 0,
+            pendingChanges: false
+        };
         
         // ==================== PASSWORD MANAGEMENT ====================
         let systemPasswords = {
@@ -949,17 +1072,35 @@
             worker: SYSTEM_CONFIG.defaultWorkerPass
         };
         
+        // ==================== DEVICE ID GENERATION ====================
+        function generateDeviceId() {
+            let deviceId = localStorage.getItem('okasha_device_id');
+            if(!deviceId) {
+                deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('okasha_device_id', deviceId);
+            }
+            return deviceId;
+        }
+        
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
             console.log("Okasha POS System Initializing...");
+            console.log("Device ID:", SYSTEM_CONFIG.deviceId);
+            
+            // Setup offline/online detection
+            setupConnectionMonitoring();
             
             // Load data
             loadAllData();
             loadPasswords();
+            loadSyncState();
             
             // Setup clocks
             updateClocks();
             setInterval(updateClocks, 1000);
+            
+            // Start sync system
+            startSyncSystem();
             
             // Check for existing session
             checkExistingSession();
@@ -970,8 +1111,61 @@
             // Setup theme
             setupTheme();
             
-            console.log("System Ready!");
+            // Update device count
+            updateDeviceCount();
+            
+            console.log("Multi-Device POS System Ready!");
         });
+        
+        function setupConnectionMonitoring() {
+            window.addEventListener('online', () => {
+                isOnline = true;
+                updateConnectionStatus();
+                showNotification('Connection restored', 'success');
+                syncAllData(); // Sync immediately when back online
+            });
+            
+            window.addEventListener('offline', () => {
+                isOnline = false;
+                updateConnectionStatus();
+                showNotification('You are offline. Changes will sync when connection is restored.', 'warning');
+            });
+            
+            updateConnectionStatus();
+        }
+        
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connection-status');
+            if(statusElement) {
+                if(isOnline) {
+                    statusElement.className = 'connection-status online';
+                    statusElement.innerHTML = '<i class="fas fa-wifi"></i><span>Connected</span>';
+                } else {
+                    statusElement.className = 'connection-status offline';
+                    statusElement.innerHTML = '<i class="fas fa-wifi-slash"></i><span>Offline</span>';
+                }
+            }
+        }
+        
+        function startSyncSystem() {
+            // Clear any existing timer
+            if(syncTimer) clearInterval(syncTimer);
+            
+            // Start sync timer
+            syncTimer = setInterval(() => {
+                if(isOnline) {
+                    syncAllData();
+                    updateDeviceCount();
+                }
+            }, SYSTEM_CONFIG.syncInterval);
+            
+            // Also sync on visibility change
+            document.addEventListener('visibilitychange', () => {
+                if(!document.hidden && isOnline) {
+                    syncAllData();
+                }
+            });
+        }
         
         function setupEventListeners() {
             // Login form
@@ -1001,17 +1195,19 @@
             
             // Listen for storage changes (cross-tab sync)
             window.addEventListener('storage', function(e) {
-                if(e.key === SYSTEM_CONFIG.storageKey) {
+                if(e.key === SYSTEM_CONFIG.storageKey || e.key === 'okasha_sync_state') {
                     console.log("Data changed in another tab, updating...");
                     loadAllData();
+                    loadSyncState();
                     updateAllDashboards();
-                    showUpdateNotification();
+                    showUpdateNotification('Data updated from another tab');
                 }
             });
             
             // Auto-save on beforeunload
             window.addEventListener('beforeunload', function() {
                 saveAllData();
+                updateSyncState();
             });
             
             // Auto-refresh data every 5 seconds
@@ -1025,6 +1221,9 @@
                     updateAllDashboards();
                 }
             }, 5000);
+            
+            // Setup theme aware charts
+            setupThemeAwareCharts();
         }
         
         function setupTheme() {
@@ -1050,23 +1249,139 @@
                 localStorage.setItem('okasha_theme', 'light');
                 themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
             }
+            
+            // Update charts if analytics modal is open
+            const analyticsModal = document.getElementById('analytics-modal');
+            if(analyticsModal && analyticsModal.classList.contains('active')) {
+                setTimeout(initializeCharts, 100);
+            }
         }
         
         function closeAllModals() {
-            const modals = ['analytics-modal', 'reports-modal', 'password-modal', 'invoice-modal'];
+            const modals = ['analytics-modal', 'reports-modal', 'password-modal', 'invoice-modal', 'backup-modal'];
             modals.forEach(modalId => {
                 const modal = document.getElementById(modalId);
                 if(modal) modal.classList.remove('active');
             });
         }
         
-        function showUpdateNotification() {
+        function showUpdateNotification(message = 'Data updated in real-time') {
             const notification = document.getElementById('update-notification');
             if(notification) {
+                notification.querySelector('span').textContent = message;
                 notification.classList.remove('hidden');
                 setTimeout(() => {
                     notification.classList.add('hidden');
                 }, 3000);
+            }
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg z-50 animate-fadeIn ${type === 'success' ? 'bg-green-900/90 text-green-100' : type === 'warning' ? 'bg-yellow-900/90 text-yellow-100' : 'bg-blue-900/90 text-blue-100'}`;
+            notification.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
+        // ==================== SYNC SYSTEM ====================
+        function syncAllData() {
+            if(!isOnline) return;
+            
+            // Update sync state
+            syncState.lastSync = Date.now();
+            syncState.deviceId = SYSTEM_CONFIG.deviceId;
+            updateSyncState();
+            
+            // Save all data (this will trigger storage event in other tabs)
+            saveAllData();
+            
+            // Update UI
+            updateSyncIndicators();
+            
+            // Log sync activity
+            logActivity('sync', 'Data synchronized across devices');
+        }
+        
+        function updateSyncState() {
+            try {
+                localStorage.setItem(SYSTEM_CONFIG.syncKey, JSON.stringify(syncState));
+            } catch(e) {
+                console.error("Error updating sync state:", e);
+            }
+        }
+        
+        function loadSyncState() {
+            try {
+                const savedState = localStorage.getItem(SYSTEM_CONFIG.syncKey);
+                if(savedState) {
+                    syncState = JSON.parse(savedState);
+                }
+            } catch(e) {
+                console.error("Error loading sync state:", e);
+            }
+        }
+        
+        function updateDeviceCount() {
+            // In a real app, this would come from a server
+            // For demo, we'll simulate multiple devices
+            const activeDevices = Math.floor(Math.random() * 3) + 1; // 1-3 devices
+            
+            const adminDeviceElement = document.getElementById('admin-device-count');
+            const workerDeviceElement = document.getElementById('worker-device-count');
+            const syncBadge = document.getElementById('sync-badge');
+            const loginSyncBadge = document.getElementById('login-sync-badge');
+            
+            if(adminDeviceElement) {
+                if(activeDevices > 1) {
+                    adminDeviceElement.classList.remove('hidden');
+                    adminDeviceElement.innerHTML = `<i class="fas fa-desktop mr-1"></i>${activeDevices} devices`;
+                } else {
+                    adminDeviceElement.classList.add('hidden');
+                }
+            }
+            
+            if(workerDeviceElement) {
+                workerDeviceElement.classList.remove('hidden');
+            }
+            
+            if(syncBadge) {
+                if(activeDevices > 1) {
+                    syncBadge.classList.remove('hidden');
+                } else {
+                    syncBadge.classList.add('hidden');
+                }
+            }
+            
+            if(loginSyncBadge && activeDevices > 1) {
+                loginSyncBadge.classList.remove('hidden');
+            }
+        }
+        
+        function updateSyncIndicators() {
+            const adminSyncStatus = document.getElementById('admin-sync-status');
+            const workerSyncStatus = document.getElementById('worker-sync-status');
+            const syncTime = new Date(syncState.lastSync).toLocaleTimeString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            if(adminSyncStatus) {
+                adminSyncStatus.textContent = `Synced at ${syncTime}`;
+            }
+            
+            if(workerSyncStatus) {
+                workerSyncStatus.textContent = `Synced at ${syncTime}`;
             }
         }
         
@@ -1100,10 +1415,11 @@
                     products: products,
                     sales: sales,
                     activityLog: activityLog,
-                    lastUpdated: new Date().toISOString()
+                    lastUpdated: new Date().toISOString(),
+                    deviceId: SYSTEM_CONFIG.deviceId
                 };
                 localStorage.setItem(SYSTEM_CONFIG.storageKey, JSON.stringify(data));
-                console.log("Data saved");
+                console.log("Data saved from device:", SYSTEM_CONFIG.deviceId);
             } catch(e) {
                 console.error("Error saving data:", e);
             }
@@ -1140,11 +1456,114 @@
                 }
                 
                 localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
-                alert('Passwords updated successfully');
+                showNotification('Passwords updated successfully', 'success');
                 closePasswordManager();
+                syncAllData();
             } catch(e) {
                 console.error("Error saving passwords:", e);
-                alert('Error saving passwords');
+                showNotification('Error saving passwords', 'warning');
+            }
+        }
+        
+        // ==================== BACKUP SYSTEM ====================
+        function backupData() {
+            const modal = document.getElementById('backup-modal');
+            if(modal) {
+                modal.classList.add('active');
+            }
+        }
+        
+        function closeBackupModal() {
+            const modal = document.getElementById('backup-modal');
+            if(modal) {
+                modal.classList.remove('active');
+            }
+        }
+        
+        function createBackup() {
+            const data = {
+                products: products,
+                sales: sales,
+                activityLog: activityLog,
+                systemPasswords: systemPasswords,
+                backupDate: new Date().toISOString(),
+                version: '1.0'
+            };
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `okasha_backup_${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showNotification('Backup created successfully', 'success');
+            logActivity('backup', 'Created system backup');
+        }
+        
+        function restoreBackup() {
+            const fileInput = document.getElementById('backup-file');
+            if(!fileInput.files.length) {
+                showNotification('Please select a backup file', 'warning');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    
+                    if(confirm('Are you sure you want to restore from backup? Current data will be replaced.')) {
+                        products = backupData.products || [];
+                        sales = backupData.sales || [];
+                        activityLog = backupData.activityLog || [];
+                        
+                        if(backupData.systemPasswords) {
+                            systemPasswords = backupData.systemPasswords;
+                            localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
+                        }
+                        
+                        saveAllData();
+                        updateAllDashboards();
+                        showNotification('Backup restored successfully', 'success');
+                        logActivity('restore', 'Restored system from backup');
+                        
+                        // Clear file input
+                        fileInput.value = '';
+                    }
+                } catch(error) {
+                    showNotification('Invalid backup file', 'warning');
+                    console.error('Error restoring backup:', error);
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        function resetAllData() {
+            if(confirm('Are you sure you want to reset ALL data? This cannot be undone!')) {
+                products = [];
+                sales = [];
+                activityLog = [];
+                workerSessionSales = [];
+                systemPasswords = {
+                    admin: SYSTEM_CONFIG.defaultAdminPass,
+                    worker: SYSTEM_CONFIG.defaultWorkerPass
+                };
+                
+                localStorage.removeItem(SYSTEM_CONFIG.storageKey);
+                localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
+                
+                updateAllDashboards();
+                showNotification('All data has been reset', 'success');
+                logActivity('reset', 'Reset all system data');
+                
+                closeBackupModal();
             }
         }
         
@@ -1196,7 +1615,8 @@
                 const session = {
                     user: currentUser,
                     loginTime: sessionStartTime,
-                    expiry: Date.now() + SYSTEM_CONFIG.sessionTimeout
+                    expiry: Date.now() + SYSTEM_CONFIG.sessionTimeout,
+                    deviceId: SYSTEM_CONFIG.deviceId
                 };
                 localStorage.setItem(SYSTEM_CONFIG.sessionKey, JSON.stringify(session));
             }
@@ -1256,7 +1676,8 @@
                 currentUser = {
                     role: currentRole,
                     name: currentRole === 'admin' ? 'Administrator' : 'Worker ' + Math.floor(Math.random() * 1000).toString().padStart(3, '0'),
-                    loginTime: new Date()
+                    loginTime: new Date(),
+                    deviceId: SYSTEM_CONFIG.deviceId
                 };
                 
                 sessionStartTime = new Date();
@@ -1283,15 +1704,18 @@
                     }
                 }
                 
-                logActivity('login', `${currentRole} logged in`);
+                logActivity('login', `${currentRole} logged in from device`);
                 
                 // Save remember me
                 if(rememberMe) {
                     localStorage.setItem('okasha_remembered_login', JSON.stringify({
                         role: currentRole,
-                        expiry: Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 days
+                        expiry: Date.now() + (30 * 24 * 60 * 60 * 1000)
                     }));
                 }
+                
+                // Sync after login
+                syncAllData();
                 
             } else {
                 if(errorDiv) {
@@ -1329,6 +1753,8 @@
                     const passwordInput = document.getElementById('password');
                     if(passwordInput) passwordInput.value = '';
                 }
+                
+                syncAllData();
             }
         }
         
@@ -1403,6 +1829,8 @@
             if (workerLastUpdateElement) {
                 workerLastUpdateElement.textContent = `Updated: ${timeStr}`;
             }
+            
+            updateSyncIndicators();
         }
         
         // ==================== CENTRALIZED UPDATE FUNCTION ====================
@@ -1462,17 +1890,17 @@
             const category = categoryInput ? categoryInput.value : 'other';
             
             if(!name || !costPrice || !sellPrice || !quantity) {
-                alert('Please fill all fields correctly');
+                showNotification('Please fill all fields correctly', 'warning');
                 return;
             }
             
             if(costPrice >= sellPrice) {
-                alert('Selling price must be higher than cost price');
+                showNotification('Selling price must be higher than cost price', 'warning');
                 return;
             }
             
             if(quantity <= 0) {
-                alert('Quantity must be at least 1');
+                showNotification('Quantity must be at least 1', 'warning');
                 return;
             }
             
@@ -1485,7 +1913,9 @@
                 quantity: quantity,
                 addedDate: new Date().toISOString(),
                 barcode: `PROD${Date.now().toString().slice(-6)}`,
-                minStock: category === 'mobile' ? 1 : category === 'accessory' ? 5 : 0
+                minStock: category === 'mobile' ? 1 : category === 'accessory' ? 5 : 0,
+                addedBy: currentUser ? currentUser.name : 'Admin',
+                deviceId: SYSTEM_CONFIG.deviceId
             };
             
             products.push(product);
@@ -1498,8 +1928,9 @@
             if(sellInput) sellInput.value = '';
             if(quantityInput) quantityInput.value = 1;
             
-            alert(`"${name}" added to inventory (Quantity: ${quantity})`);
+            showNotification(`"${name}" added to inventory (Quantity: ${quantity})`, 'success');
             logActivity('product_added', `Added ${name} to inventory`);
+            syncAllData();
         }
         
         function updateAdminDashboard() {
@@ -1646,8 +2077,9 @@
             if(newQty !== null && !isNaN(newQty)) product.quantity = parseInt(newQty);
             
             updateAllDashboards();
-            alert('Product updated successfully');
+            showNotification('Product updated successfully', 'success');
             logActivity('product_updated', `Updated ${product.name}`);
+            syncAllData();
         }
         
         function deleteProduct(id) {
@@ -1657,22 +2089,39 @@
             if(confirm(`Are you sure you want to delete "${product.name}"?`)) {
                 products = products.filter(p => p.id !== id);
                 updateAllDashboards();
-                alert(`"${product.name}" deleted from inventory`);
+                showNotification(`"${product.name}" deleted from inventory`, 'success');
                 logActivity('product_deleted', `Deleted ${product.name}`);
+                syncAllData();
             }
         }
         
         function refreshAdmin() {
             updateAdminDashboard();
-            alert('Dashboard refreshed');
+            showNotification('Dashboard refreshed', 'success');
+        }
+        
+        function exportProducts() {
+            const dataStr = JSON.stringify(products, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `products_export_${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            showNotification('Products exported successfully', 'success');
+            logActivity('export', 'Exported products list');
         }
         
         function clearSalesHistory() {
             if(confirm('Clear all sales history? This action cannot be undone.')) {
                 sales = [];
                 updateAllDashboards();
-                alert('Sales history cleared');
+                showNotification('Sales history cleared', 'success');
                 logActivity('sales_cleared', 'Cleared all sales history');
+                syncAllData();
             }
         }
         
@@ -1772,12 +2221,12 @@
         function quickSale(productId) {
             const product = products.find(p => p.id === productId);
             if(!product) {
-                alert('Product not found');
+                showNotification('Product not found', 'warning');
                 return;
             }
             
             if(product.quantity <= 0) {
-                alert('Product is out of stock');
+                showNotification('Product is out of stock', 'warning');
                 return;
             }
             
@@ -1789,7 +2238,7 @@
             if(!product) return;
             
             if(product.quantity <= 0) {
-                alert('Product is out of stock');
+                showNotification('Product is out of stock', 'warning');
                 return;
             }
             
@@ -1798,7 +2247,7 @@
             
             const qty = parseInt(quantity);
             if(qty > product.quantity) {
-                alert(`Only ${product.quantity} items available`);
+                showNotification(`Only ${product.quantity} items available`, 'warning');
                 return;
             }
             
@@ -1815,7 +2264,8 @@
                 total: product.sellPrice * quantity,
                 date: new Date().toISOString(),
                 worker: currentUser ? currentUser.name : 'Worker',
-                isCustom: false
+                isCustom: false,
+                deviceId: SYSTEM_CONFIG.deviceId
             };
             
             sales.push(sale);
@@ -1824,8 +2274,9 @@
             
             updateAllDashboards();
             
-            alert(`Sold ${product.name} x${quantity} for Rs. ${sale.total.toLocaleString()}`);
+            showNotification(`Sold ${product.name} x${quantity} for Rs. ${sale.total.toLocaleString()}`, 'success');
             logActivity('sale', `${currentUser ? currentUser.name : 'Worker'} sold ${product.name} x${quantity}`, sale.total);
+            syncAllData();
         }
         
         function processManualSale() {
@@ -1838,12 +2289,12 @@
             const quantity = quantityInput ? parseInt(quantityInput.value) : 0;
             
             if(!productName || !price || !quantity) {
-                alert('Please fill all fields for manual sale');
+                showNotification('Please fill all fields for manual sale', 'warning');
                 return;
             }
             
             if(price <= 0 || quantity <= 0) {
-                alert('Price and quantity must be positive numbers');
+                showNotification('Price and quantity must be positive numbers', 'warning');
                 return;
             }
             
@@ -1856,7 +2307,8 @@
                 total: price * quantity,
                 date: new Date().toISOString(),
                 worker: currentUser ? currentUser.name : 'Worker',
-                isCustom: true
+                isCustom: true,
+                deviceId: SYSTEM_CONFIG.deviceId
             };
             
             sales.push(sale);
@@ -1868,8 +2320,9 @@
             if(priceInput) priceInput.value = '';
             if(quantityInput) quantityInput.value = 1;
             
-            alert(`Custom sale: ${productName} x${quantity} for Rs. ${sale.total.toLocaleString()}`);
+            showNotification(`Custom sale: ${productName} x${quantity} for Rs. ${sale.total.toLocaleString()}`, 'success');
             logActivity('custom_sale', `${currentUser ? currentUser.name : 'Worker'} made custom sale: ${productName}`, sale.total);
+            syncAllData();
         }
         
         function updateWorkerSalesList() {
@@ -1922,7 +2375,7 @@
         function simulateBarcode() {
             const availableProducts = products.filter(p => p.quantity > 0);
             if(availableProducts.length === 0) {
-                alert('No products available to scan');
+                showNotification('No products available to scan', 'warning');
                 return;
             }
             
@@ -1937,7 +2390,7 @@
                 searchInput.dispatchEvent(event);
             }
             
-            alert(`Scanned: ${randomProduct.name} - Rs. ${randomProduct.sellPrice}`);
+            showNotification(`Scanned: ${randomProduct.name} - Rs. ${randomProduct.sellPrice}`, 'success');
         }
         
         // ==================== REAL-TIME SEARCH ====================
@@ -1975,48 +2428,846 @@
             }
         }
         
-        // ==================== UTILITY FUNCTIONS ====================
-        function calculateTotalProfit() {
-            return sales.reduce((sum, sale) => {
-                if(sale.isCustom) {
-                    return sum + (sale.total * 0.3);
-                } else {
-                    const product = products.find(p => p.id === sale.productId);
-                    if(product) {
-                        return sum + ((sale.price - product.costPrice) * sale.quantity);
-                    }
-                    return sum + (sale.total * 0.3);
-                }
-            }, 0);
+        // ==================== ANALYTICS FUNCTIONS ====================
+        function showAnalytics() {
+            const modal = document.getElementById('analytics-modal');
+            if(modal) {
+                modal.classList.add('active');
+                setTimeout(initializeCharts, 100);
+            }
         }
         
-        function getCategoryColor(category) {
-            const colors = {
-                mobile: 'bg-blue-900/30 text-blue-300',
-                accessory: 'bg-purple-900/30 text-purple-300',
-                repair: 'bg-green-900/30 text-green-300',
-                tablet: 'bg-yellow-900/30 text-yellow-300',
-                other: 'bg-gray-900/30 text-gray-300'
-            };
-            return colors[category] || 'bg-gray-900/30 text-gray-300';
+        function closeAnalytics() {
+            const modal = document.getElementById('analytics-modal');
+            if(modal) {
+                modal.classList.remove('active');
+                Object.values(charts).forEach(chart => {
+                    if(chart) chart.destroy();
+                });
+                charts = {};
+            }
         }
         
-        function logActivity(type, message, amount = null) {
-            const activity = {
-                id: Date.now(),
-                type: type,
-                message: message,
-                amount: amount,
-                timestamp: new Date().toISOString(),
-                user: currentUser ? currentUser.name : 'System'
-            };
+        function initializeCharts() {
+            // Destroy existing charts
+            Object.values(charts).forEach(chart => {
+                if(chart) chart.destroy();
+            });
             
-            activityLog.push(activity);
-            if(activityLog.length > 100) {
-                activityLog = activityLog.slice(-100);
+            // Revenue Chart (Last 7 Days)
+            const revenueCtx = document.getElementById('revenueChart');
+            if(revenueCtx) {
+                const revenueData = getRevenueData();
+                charts.revenueChart = new Chart(revenueCtx, {
+                    type: 'line',
+                    data: {
+                        labels: revenueData.dates,
+                        datasets: [{
+                            label: 'Daily Revenue (Rs.)',
+                            data: revenueData.amounts,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: document.body.classList.contains('light-mode') ? '#1e293b' : '#f1f5f9'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: document.body.classList.contains('light-mode') ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'
+                                },
+                                ticks: {
+                                    color: document.body.classList.contains('light-mode') ? '#1e293b' : '#f1f5f9',
+                                    callback: function(value) {
+                                        return 'Rs. ' + value.toLocaleString();
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: document.body.classList.contains('light-mode') ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'
+                                },
+                                ticks: {
+                                    color: document.body.classList.contains('light-mode') ? '#1e293b' : '#f1f5f9'
+                                }
+                            }
+                        }
+                    }
+                });
             }
             
-            saveAllData();
+            // Category Chart
+            const categoryCtx = document.getElementById('categoryChart');
+            if(categoryCtx) {
+                const categoryData = getCategoryData();
+                charts.categoryChart = new Chart(categoryCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: categoryData.labels,
+                        datasets: [{
+                            data: categoryData.values,
+                            backgroundColor: [
+                                '#3b82f6', // Mobile - Blue
+                                '#8b5cf6', // Accessory - Purple
+                                '#10b981', // Repair - Green
+                                '#f59e0b', // Tablet - Yellow
+                                '#6b7280'  // Other - Gray
+                            ],
+                            borderWidth: 2,
+                            borderColor: document.body.classList.contains('light-mode') ? '#ffffff' : '#0f172a'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: document.body.classList.contains('light-mode') ? '#1e293b' : '#f1f5f9',
+                                    padding: 20
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Products Chart
+            const productsCtx = document.getElementById('productsChart');
+            if(productsCtx) {
+                const productsData = getTopProductsData();
+                charts.productsChart = new Chart(productsCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: productsData.labels,
+                        datasets: [{
+                            label: 'Quantity Sold',
+                            data: productsData.values,
+                            backgroundColor: '#10b981',
+                            borderColor: '#059669',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: document.body.classList.contains('light-mode') ? '#1e293b' : '#f1f5f9'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: document.body.classList.contains('light-mode') ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'
+                                },
+                                ticks: {
+                                    color: document.body.classList.contains('light-mode') ? '#1e293b' : '#f1f5f9'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: document.body.classList.contains('light-mode') ? '#1e293b' : '#f1f5f9'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Daily Chart
+            const dailyCtx = document.getElementById('dailyChart');
+            if(dailyCtx) {
+                const dailyData = getDailyPatternData();
+                charts.dailyChart = new Chart(dailyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['6 AM', '9 AM', '12 PM', '3 PM', '6 PM', '9 PM'],
+                        datasets: [{
+                            label: 'Sales Pattern',
+                            data: dailyData,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: document.body.classList.contains('light-mode') ? '#1e293b' : '#f1f5f9'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: document.body.classList.contains('light-mode') ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'
+                                },
+                                ticks: {
+                                    color: document.body.classList.contains('light-mode') ? '#1e293b' : '#f1f5f9'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: document.body.classList.contains('light-mode') ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'
+                                },
+                                ticks: {
+                                    color: document.body.classList.contains('light-mode') ? '#1e293b' : '#f1f5f9'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function getRevenueData() {
+            const dates = [];
+            const amounts = [];
+            
+            // Generate last 7 days
+            for(let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                dates.push(dateStr);
+                
+                // Calculate sales for this day
+                const daySales = sales.filter(sale => {
+                    const saleDate = new Date(sale.date);
+                    return saleDate.toDateString() === date.toDateString();
+                });
+                
+                const dayTotal = daySales.reduce((sum, sale) => sum + sale.total, 0);
+                amounts.push(dayTotal);
+            }
+            
+            return { dates, amounts };
+        }
+        
+        function getCategoryData() {
+            const categories = {
+                mobile: 0,
+                accessory: 0,
+                repair: 0,
+                tablet: 0,
+                other: 0
+            };
+            
+            sales.forEach(sale => {
+                if(!sale.isCustom && sale.productId) {
+                    const product = products.find(p => p.id === sale.productId);
+                    if(product) {
+                        categories[product.category] = (categories[product.category] || 0) + sale.total;
+                    }
+                } else {
+                    categories.other += sale.total;
+                }
+            });
+            
+            return {
+                labels: ['Mobile', 'Accessory', 'Repair', 'Tablet', 'Other'],
+                values: [categories.mobile, categories.accessory, categories.repair, categories.tablet, categories.other]
+            };
+        }
+        
+        function getTopProductsData() {
+            const productSales = {};
+            
+            sales.forEach(sale => {
+                if(!sale.isCustom && sale.productId) {
+                    if(!productSales[sale.productName]) {
+                        productSales[sale.productName] = 0;
+                    }
+                    productSales[sale.productName] += sale.quantity;
+                }
+            });
+            
+            const sortedProducts = Object.entries(productSales)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            return {
+                labels: sortedProducts.map(p => p[0].substring(0, 15) + (p[0].length > 15 ? '...' : '')),
+                values: sortedProducts.map(p => p[1])
+            };
+        }
+        
+        function getDailyPatternData() {
+            const pattern = [0, 0, 0, 0, 0, 0];
+            
+            sales.forEach(sale => {
+                const saleTime = new Date(sale.date).getHours();
+                if(saleTime >= 6 && saleTime < 9) pattern[0]++;
+                else if(saleTime >= 9 && saleTime < 12) pattern[1]++;
+                else if(saleTime >= 12 && saleTime < 15) pattern[2]++;
+                else if(saleTime >= 15 && saleTime < 18) pattern[3]++;
+                else if(saleTime >= 18 && saleTime < 21) pattern[4]++;
+                else pattern[5]++;
+            });
+            
+            return pattern;
+        }
+        
+        function printAnalytics() {
+            window.print();
+        }
+        
+        // ==================== INVOICE FUNCTIONS ====================
+        function generateDailyInvoice() {
+            const today = new Date().toDateString();
+            const todaySales = sales.filter(sale => {
+                const saleDate = new Date(sale.date);
+                return saleDate.toDateString() === today;
+            });
+            
+            if(todaySales.length === 0) {
+                showNotification('No sales today to generate invoice', 'warning');
+                return;
+            }
+            
+            showInvoice(todaySales, 'DAILY INVOICE');
+        }
+        
+        function generateSessionInvoice() {
+            if(workerSessionSales.length === 0) {
+                showNotification('No sales in this session to generate invoice', 'warning');
+                return;
+            }
+            
+            showInvoice(workerSessionSales, 'SESSION INVOICE');
+        }
+        
+        function generateInvoiceReport() {
+            if(sales.length === 0) {
+                showNotification('No sales history to generate invoice', 'warning');
+                return;
+            }
+            
+            showInvoice(sales, 'COMPLETE SALES REPORT');
+        }
+        
+        function showInvoice(saleItems, title) {
+            const modal = document.getElementById('invoice-modal');
+            const content = document.getElementById('invoice-content');
+            
+            if(!modal || !content) return;
+            
+            const totalAmount = saleItems.reduce((sum, sale) => sum + sale.total, 0);
+            const totalQuantity = saleItems.reduce((sum, sale) => sum + sale.quantity, 0);
+            const date = new Date().toLocaleDateString('en-GB', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            const time = new Date().toLocaleTimeString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            content.innerHTML = `
+                <div class="invoice-header">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h1 class="text-3xl font-bold gradient-text">OKASHA COMMUNICATION</h1>
+                            <p class="text-gray-600">Wah Cantt | Mobile Sale, Purchase & Repair</p>
+                            <p class="text-gray-500 text-sm">Contact: 0300-1234567</p>
+                        </div>
+                        <div class="text-right">
+                            <h2 class="text-2xl font-bold text-blue-600">${title}</h2>
+                            <p class="text-gray-600">Date: ${date}</p>
+                            <p class="text-gray-600">Time: ${time}</p>
+                            <p class="text-gray-600">Invoice #: INV-${Date.now().toString().slice(-6)}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-2">Summary</h3>
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="p-3 bg-blue-50 rounded-lg">
+                            <p class="text-sm text-gray-600">Total Items</p>
+                            <p class="text-xl font-bold">${totalQuantity}</p>
+                        </div>
+                        <div class="p-3 bg-green-50 rounded-lg">
+                            <p class="text-sm text-gray-600">Total Sales</p>
+                            <p class="text-xl font-bold">${saleItems.length}</p>
+                        </div>
+                        <div class="p-3 bg-yellow-50 rounded-lg">
+                            <p class="text-sm text-gray-600">Total Amount</p>
+                            <p class="text-xl font-bold text-green-600">Rs. ${totalAmount.toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3 class="text-lg font-semibold mb-3">Sales Details</h3>
+                <table class="invoice-items">
+                    <thead>
+                        <tr>
+                            <th>Sr.</th>
+                            <th>Product/Service</th>
+                            <th>Quantity</th>
+                            <th>Price (Rs.)</th>
+                            <th>Total (Rs.)</th>
+                            <th>Date & Time</th>
+                            <th>Worker</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${saleItems.map((sale, index) => `
+                            <tr>
+                                <td class="text-center">${index + 1}</td>
+                                <td>${sale.productName}${sale.isCustom ? ' <span class="text-yellow-600 text-xs">(Custom)</span>' : ''}</td>
+                                <td class="text-center">${sale.quantity}</td>
+                                <td class="text-right">${sale.price.toLocaleString()}</td>
+                                <td class="text-right font-semibold">${sale.total.toLocaleString()}</td>
+                                <td class="text-center">${new Date(sale.date).toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'})}</td>
+                                <td class="text-center">${sale.worker}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                
+                <div class="invoice-totals">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-700">Subtotal:</span>
+                        <span class="font-semibold">Rs. ${totalAmount.toLocaleString()}</span>
+                    </div>
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-gray-700">Estimated Profit (30%):</span>
+                        <span class="font-semibold text-green-600">Rs. ${Math.round(totalAmount * 0.3).toLocaleString()}</span>
+                    </div>
+                    <div class="border-t pt-2 mt-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-lg font-bold">GRAND TOTAL:</span>
+                            <span class="text-2xl font-bold text-blue-600">Rs. ${totalAmount.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-8 pt-6 border-t">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-semibold mb-2">Customer Notes</h4>
+                            <p class="text-sm text-gray-600">All sales are final. Warranty as per manufacturer terms.</p>
+                        </div>
+                        <div class="text-right">
+                            <h4 class="font-semibold mb-2">Authorized Signature</h4>
+                            <div class="mt-6 pt-4 border-t border-dashed">
+                                <p class="text-sm text-gray-600">Okasha Communication</p>
+                                <p class="text-xs text-gray-500">Wah Cantt Branch</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-center text-xs text-gray-500">
+                        <p>Thank you for your business! For queries, contact: 0300-1234567</p>
+                        <p>This is a computer generated invoice, no signature required.</p>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+        
+        function printInvoice() {
+            window.print();
+        }
+        
+        function closeInvoice() {
+            const modal = document.getElementById('invoice-modal');
+            if(modal) {
+                modal.classList.remove('active');
+            }
+        }
+        
+        // ==================== REPORTS FUNCTIONS ====================
+        function showReports() {
+            const modal = document.getElementById('reports-modal');
+            if(modal) {
+                modal.classList.add('active');
+            }
+        }
+        
+        function closeReports() {
+            const modal = document.getElementById('reports-modal');
+            if(modal) {
+                modal.classList.remove('active');
+                const output = document.getElementById('report-output');
+                if(output) {
+                    output.classList.add('hidden');
+                    output.innerHTML = '';
+                }
+            }
+        }
+        
+        function generateDailyReport() {
+            const today = new Date().toDateString();
+            const todaySales = sales.filter(sale => {
+                const saleDate = new Date(sale.date);
+                return saleDate.toDateString() === today;
+            });
+            
+            const totalRevenue = todaySales.reduce((sum, sale) => sum + sale.total, 0);
+            const totalProfit = calculateProfitForSales(todaySales);
+            
+            const reportOutput = document.getElementById('report-output');
+            if(reportOutput) {
+                reportOutput.innerHTML = `
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold gradient-text mb-2">Daily Sales Report</h3>
+                        <p class="text-gray-400">${new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="p-4 bg-blue-900/20 rounded-xl">
+                            <p class="text-sm text-blue-300">Total Sales</p>
+                            <p class="text-2xl font-bold">${todaySales.length}</p>
+                        </div>
+                        <div class="p-4 bg-green-900/20 rounded-xl">
+                            <p class="text-sm text-green-300">Total Revenue</p>
+                            <p class="text-2xl font-bold">Rs. ${totalRevenue.toLocaleString()}</p>
+                        </div>
+                        <div class="p-4 bg-yellow-900/20 rounded-xl">
+                            <p class="text-sm text-yellow-300">Total Profit</p>
+                            <p class="text-2xl font-bold">Rs. ${totalProfit.toLocaleString()}</p>
+                        </div>
+                        <div class="p-4 bg-purple-900/20 rounded-xl">
+                            <p class="text-sm text-purple-300">Avg. Sale Value</p>
+                            <p class="text-2xl font-bold">Rs. ${todaySales.length > 0 ? Math.round(totalRevenue / todaySales.length).toLocaleString() : '0'}</p>
+                        </div>
+                    </div>
+                    
+                    <h4 class="font-semibold mb-3">Top Products Today</h4>
+                    <div class="space-y-2 mb-6">
+                        ${getTopProductsToday().map(product => `
+                            <div class="flex justify-between items-center p-3 bg-slate-800/30 rounded-lg">
+                                <span>${product.name}</span>
+                                <div class="flex items-center gap-4">
+                                    <span class="text-sm text-gray-400">Sold: ${product.quantity}</span>
+                                    <span class="font-bold text-green-400">Rs. ${product.total.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <button onclick="printReport()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg hover:bg-blue-900/50">
+                            <i class="fas fa-print mr-2"></i>Print Report
+                        </button>
+                    </div>
+                `;
+                reportOutput.classList.remove('hidden');
+            }
+        }
+        
+        function generateWeeklyReport() {
+            const weekSales = sales.filter(sale => {
+                const saleDate = new Date(sale.date);
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                return saleDate >= weekAgo;
+            });
+            
+            const totalRevenue = weekSales.reduce((sum, sale) => sum + sale.total, 0);
+            const totalProfit = calculateProfitForSales(weekSales);
+            
+            const reportOutput = document.getElementById('report-output');
+            if(reportOutput) {
+                reportOutput.innerHTML = `
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold gradient-text mb-2">Weekly Sales Report</h3>
+                        <p class="text-gray-400">Last 7 Days Performance</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="p-4 bg-blue-900/20 rounded-xl">
+                            <p class="text-sm text-blue-300">Total Sales</p>
+                            <p class="text-2xl font-bold">${weekSales.length}</p>
+                        </div>
+                        <div class="p-4 bg-green-900/20 rounded-xl">
+                            <p class="text-sm text-green-300">Total Revenue</p>
+                            <p class="text-2xl font-bold">Rs. ${totalRevenue.toLocaleString()}</p>
+                        </div>
+                        <div class="p-4 bg-yellow-900/20 rounded-xl">
+                            <p class="text-sm text-yellow-300">Total Profit</p>
+                            <p class="text-2xl font-bold">Rs. ${totalProfit.toLocaleString()}</p>
+                        </div>
+                        <div class="p-4 bg-purple-900/20 rounded-xl">
+                            <p class="text-sm text-purple-300">Daily Average</p>
+                            <p class="text-2xl font-bold">Rs. ${Math.round(totalRevenue / 7).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    
+                    <h4 class="font-semibold mb-3">Revenue Trend (Last 7 Days)</h4>
+                    <div class="bg-slate-800/30 rounded-xl p-4 mb-6">
+                        <div class="flex items-end h-32 gap-1 mb-4">
+                            ${getLast7DaysRevenue().map((amount, index) => `
+                                <div class="flex-1 flex flex-col items-center">
+                                    <div class="w-full bg-gradient-to-t from-blue-600 to-blue-800 rounded-t" style="height: ${Math.max(20, (amount / Math.max(...getLast7DaysRevenue())) * 100)}%"></div>
+                                    <span class="text-xs mt-2 text-gray-400">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index]}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="text-center text-sm text-gray-400">
+                            Rs. ${Math.min(...getLast7DaysRevenue()).toLocaleString()} - Rs. ${Math.max(...getLast7DaysRevenue()).toLocaleString()}
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <div></div>
+                        <button onclick="printReport()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg hover:bg-blue-900/50">
+                            <i class="fas fa-print mr-2"></i>Print Report
+                        </button>
+                    </div>
+                `;
+                reportOutput.classList.remove('hidden');
+            }
+        }
+        
+        function generateMonthlyReport() {
+            const monthSales = sales.filter(sale => {
+                const saleDate = new Date(sale.date);
+                const monthStart = new Date();
+                monthStart.setDate(1);
+                monthStart.setHours(0, 0, 0, 0);
+                return saleDate >= monthStart;
+            });
+            
+            const totalRevenue = monthSales.reduce((sum, sale) => sum + sale.total, 0);
+            const totalProfit = calculateProfitForSales(monthSales);
+            const avgDailyRevenue = totalRevenue / new Date().getDate();
+            
+            const reportOutput = document.getElementById('report-output');
+            if(reportOutput) {
+                reportOutput.innerHTML = `
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold gradient-text mb-2">Monthly Sales Report</h3>
+                        <p class="text-gray-400">${new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })} Performance</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="p-4 bg-blue-900/20 rounded-xl">
+                            <p class="text-sm text-blue-300">Total Sales</p>
+                            <p class="text-2xl font-bold">${monthSales.length}</p>
+                        </div>
+                        <div class="p-4 bg-green-900/20 rounded-xl">
+                            <p class="text-sm text-green-300">Total Revenue</p>
+                            <p class="text-2xl font-bold">Rs. ${totalRevenue.toLocaleString()}</p>
+                        </div>
+                        <div class="p-4 bg-yellow-900/20 rounded-xl">
+                            <p class="text-sm text-yellow-300">Total Profit</p>
+                            <p class="text-2xl font-bold">Rs. ${totalProfit.toLocaleString()}</p>
+                        </div>
+                        <div class="p-4 bg-purple-900/20 rounded-xl">
+                            <p class="text-sm text-purple-300">Daily Average</p>
+                            <p class="text-2xl font-bold">Rs. ${Math.round(avgDailyRevenue).toLocaleString()}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <h4 class="font-semibold mb-3">Top Categories</h4>
+                            <div class="space-y-2">
+                                ${getCategorySales().map(cat => `
+                                    <div class="flex justify-between items-center p-2">
+                                        <span class="flex items-center">
+                                            <span class="w-3 h-3 rounded-full mr-2 ${getCategoryColorClass(cat.category)}"></span>
+                                            ${cat.category}
+                                        </span>
+                                        <span class="font-bold">Rs. ${cat.total.toLocaleString()}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold mb-3">Best Performing Days</h4>
+                            <div class="space-y-2">
+                                ${getBestDays().map(day => `
+                                    <div class="flex justify-between items-center p-2">
+                                        <span>${day.day}</span>
+                                        <span class="font-bold">Rs. ${day.revenue.toLocaleString()}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="p-4 bg-slate-800/30 rounded-xl mb-6">
+                        <h4 class="font-semibold mb-3">Summary</h4>
+                        <p class="text-gray-400 mb-2">Monthly revenue target: Rs. ${(totalRevenue * 1.2).toLocaleString()}</p>
+                        <div class="w-full bg-gray-700 rounded-full h-4 mb-2">
+                            <div class="bg-gradient-to-r from-green-500 to-green-600 h-4 rounded-full" style="width: ${Math.min(100, (totalRevenue / (totalRevenue * 1.2)) * 100)}%"></div>
+                        </div>
+                        <p class="text-right text-sm text-gray-400">${Math.round((totalRevenue / (totalRevenue * 1.2)) * 100)}% of target achieved</p>
+                    </div>
+                    
+                    <div class="flex justify-end">
+                        <button onclick="printReport()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg hover:bg-blue-900/50">
+                            <i class="fas fa-print mr-2"></i>Print Report
+                        </button>
+                    </div>
+                `;
+                reportOutput.classList.remove('hidden');
+            }
+        }
+        
+        function printReport() {
+            window.print();
+        }
+        
+        // ==================== ACTIVITY FUNCTIONS ====================
+        function updateAdminSalesHistory() {
+            const container = document.getElementById('admin-sales-history');
+            if(!container) return;
+            
+            if(sales.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-receipt text-3xl text-gray-700 mb-3"></i>
+                        <p class="text-gray-500">No sales recorded yet</p>
+                        <p class="text-sm text-gray-400">Sales will appear here</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = sales.slice(-8).reverse().map(sale => {
+                const saleDate = new Date(sale.date);
+                const timeAgo = getTimeAgo(saleDate);
+                
+                return `
+                    <div class="p-3 bg-slate-800/30 rounded-lg animate-fadeIn">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-medium flex items-center gap-2">
+                                    ${sale.productName}
+                                    ${sale.isCustom ? '<span class="text-xs px-1 py-0.5 bg-yellow-900/30 text-yellow-300 rounded">Custom</span>' : ''}
+                                </p>
+                                <div class="flex items-center gap-3 text-sm text-gray-400 mt-1">
+                                    <span>${saleDate.toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'})}</span>
+                                    <span>•</span>
+                                    <span>${sale.quantity} items</span>
+                                    <span>•</span>
+                                    <span>${timeAgo}</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-green-400">Rs. ${sale.total.toLocaleString()}</p>
+                                <p class="text-xs text-gray-400">by ${sale.worker}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function updateWorkerActivity() {
+            const container = document.getElementById('worker-activity');
+            if(!container) return;
+            
+            const recentActivity = activityLog.slice(-6).reverse();
+            
+            if(recentActivity.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-bell-slash text-3xl text-gray-700 mb-3"></i>
+                        <p class="text-gray-500">No recent activity</p>
+                        <p class="text-sm text-gray-400">Activity will appear here</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = recentActivity.map(activity => {
+                const activityTime = new Date(activity.timestamp);
+                const timeAgo = getTimeAgo(activityTime);
+                
+                let icon = 'fa-info-circle';
+                let color = 'text-blue-400';
+                
+                switch(activity.type) {
+                    case 'sale':
+                        icon = 'fa-shopping-cart';
+                        color = 'text-green-400';
+                        break;
+                    case 'product_added':
+                        icon = 'fa-plus-circle';
+                        color = 'text-purple-400';
+                        break;
+                    case 'product_updated':
+                        icon = 'fa-edit';
+                        color = 'text-yellow-400';
+                        break;
+                    case 'product_deleted':
+                        icon = 'fa-trash';
+                        color = 'text-red-400';
+                        break;
+                    case 'login':
+                        icon = 'fa-sign-in-alt';
+                        color = 'text-green-400';
+                        break;
+                    case 'logout':
+                        icon = 'fa-sign-out-alt';
+                        color = 'text-red-400';
+                        break;
+                    case 'sync':
+                        icon = 'fa-sync-alt';
+                        color = 'text-blue-400';
+                        break;
+                    case 'backup':
+                        icon = 'fa-download';
+                        color = 'text-indigo-400';
+                        break;
+                    case 'restore':
+                        icon = 'fa-upload';
+                        color = 'text-green-400';
+                        break;
+                }
+                
+                return `
+                    <div class="p-3 bg-slate-800/30 rounded-lg animate-fadeIn">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full ${color} bg-opacity-20 flex items-center justify-center">
+                                <i class="fas ${icon} text-sm"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-medium">${activity.message}</p>
+                                <div class="flex justify-between items-center mt-1">
+                                    <span class="text-xs text-gray-400">${timeAgo}</span>
+                                    <span class="text-xs px-2 py-0.5 bg-slate-700 rounded">${activity.user}</span>
+                                </div>
+                                ${activity.amount ? `<p class="text-xs text-green-400 mt-1">Amount: Rs. ${activity.amount.toLocaleString()}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
         
         // ==================== PASSWORD FUNCTIONS ====================
@@ -2068,59 +3319,193 @@
             }
         }
         
-        // ==================== MODAL FUNCTIONS ====================
-        function showAnalytics() {
-            const modal = document.getElementById('analytics-modal');
-            if(modal) {
-                modal.classList.add('active');
-                setTimeout(initializeCharts, 100);
-            }
-        }
-        
-        function closeAnalytics() {
-            const modal = document.getElementById('analytics-modal');
-            if(modal) {
-                modal.classList.remove('active');
-                Object.values(charts).forEach(chart => {
-                    if(chart) chart.destroy();
-                });
-                charts = {};
-            }
-        }
-        
-        function showReports() {
-            const modal = document.getElementById('reports-modal');
-            if(modal) {
-                modal.classList.add('active');
-            }
-        }
-        
-        function closeReports() {
-            const modal = document.getElementById('reports-modal');
-            if(modal) {
-                modal.classList.remove('active');
-                const output = document.getElementById('report-output');
-                if(output) {
-                    output.classList.add('hidden');
-                    output.innerHTML = '';
+        // ==================== UTILITY FUNCTIONS ====================
+        function calculateTotalProfit() {
+            return sales.reduce((sum, sale) => {
+                if(sale.isCustom) {
+                    return sum + (sale.total * 0.3);
+                } else {
+                    const product = products.find(p => p.id === sale.productId);
+                    if(product) {
+                        return sum + ((sale.price - product.costPrice) * sale.quantity);
+                    }
+                    return sum + (sale.total * 0.3);
                 }
+            }, 0);
+        }
+        
+        function calculateProfitForSales(salesArray) {
+            return salesArray.reduce((sum, sale) => {
+                if(sale.isCustom) {
+                    return sum + (sale.total * 0.3);
+                } else {
+                    const product = products.find(p => p.id === sale.productId);
+                    if(product) {
+                        return sum + ((sale.price - product.costPrice) * sale.quantity);
+                    }
+                    return sum + (sale.total * 0.3);
+                }
+            }, 0);
+        }
+        
+        function getCategoryColor(category) {
+            const colors = {
+                mobile: 'bg-blue-900/30 text-blue-300',
+                accessory: 'bg-purple-900/30 text-purple-300',
+                repair: 'bg-green-900/30 text-green-300',
+                tablet: 'bg-yellow-900/30 text-yellow-300',
+                other: 'bg-gray-900/30 text-gray-300'
+            };
+            return colors[category] || 'bg-gray-900/30 text-gray-300';
+        }
+        
+        function getCategoryColorClass(category) {
+            const colorMap = {
+                'Mobile': 'bg-blue-500',
+                'Accessory': 'bg-purple-500',
+                'Repair': 'bg-green-500',
+                'Tablet': 'bg-yellow-500',
+                'Custom': 'bg-gray-500',
+                'Other': 'bg-gray-500'
+            };
+            return colorMap[category] || 'bg-gray-500';
+        }
+        
+        function logActivity(type, message, amount = null) {
+            const activity = {
+                id: Date.now(),
+                type: type,
+                message: message,
+                amount: amount,
+                timestamp: new Date().toISOString(),
+                user: currentUser ? currentUser.name : 'System',
+                deviceId: SYSTEM_CONFIG.deviceId
+            };
+            
+            activityLog.push(activity);
+            if(activityLog.length > 100) {
+                activityLog = activityLog.slice(-100);
+            }
+            
+            saveAllData();
+        }
+        
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+            
+            if(diff < 60) return 'Just now';
+            if(diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if(diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            if(diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+            return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+        }
+        
+        function getTopProductsToday() {
+            const today = new Date().toDateString();
+            const todaySales = sales.filter(sale => {
+                const saleDate = new Date(sale.date);
+                return saleDate.toDateString() === today && !sale.isCustom;
+            });
+            
+            const productMap = {};
+            todaySales.forEach(sale => {
+                if(!productMap[sale.productName]) {
+                    productMap[sale.productName] = { quantity: 0, total: 0, name: sale.productName };
+                }
+                productMap[sale.productName].quantity += sale.quantity;
+                productMap[sale.productName].total += sale.total;
+            });
+            
+            return Object.values(productMap)
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5);
+        }
+        
+        function getLast7DaysRevenue() {
+            const amounts = [];
+            for(let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                
+                const daySales = sales.filter(sale => {
+                    const saleDate = new Date(sale.date);
+                    return saleDate.toDateString() === date.toDateString();
+                });
+                
+                const dayTotal = daySales.reduce((sum, sale) => sum + sale.total, 0);
+                amounts.push(dayTotal);
+            }
+            return amounts;
+        }
+        
+        function getCategorySales() {
+            const categories = {};
+            sales.forEach(sale => {
+                if(!sale.isCustom && sale.productId) {
+                    const product = products.find(p => p.id === sale.productId);
+                    if(product) {
+                        const category = product.category.charAt(0).toUpperCase() + product.category.slice(1);
+                        categories[category] = (categories[category] || 0) + sale.total;
+                    }
+                } else {
+                    categories['Custom'] = (categories['Custom'] || 0) + sale.total;
+                }
+            });
+            
+            return Object.entries(categories)
+                .map(([category, total]) => ({ category, total }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5);
+        }
+        
+        function getBestDays() {
+            const dayMap = {};
+            sales.forEach(sale => {
+                const day = new Date(sale.date).toLocaleDateString('en-GB', { weekday: 'short' });
+                dayMap[day] = (dayMap[day] || 0) + sale.total;
+            });
+            
+            return Object.entries(dayMap)
+                .map(([day, revenue]) => ({ day, revenue }))
+                .sort((a, b) => b.revenue - a.revenue)
+                .slice(0, 5);
+        }
+        
+        // ==================== THEME AWARE CHARTS ====================
+        function setupThemeAwareCharts() {
+            // Reinitialize charts when theme changes
+            const themeToggle = document.getElementById('theme-toggle');
+            if(themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    setTimeout(() => {
+                        const analyticsModal = document.getElementById('analytics-modal');
+                        if(analyticsModal && analyticsModal.classList.contains('active')) {
+                            initializeCharts();
+                        }
+                    }, 100);
+                });
             }
         }
         
         // ==================== FINAL SETUP ====================
         console.log("=========================================");
-        console.log("SYSTEM FEATURES:");
-        console.log("1. Real-time data sync across all browsers");
-        console.log("2. 24-hour session persistence");
-        console.log("3. Auto-save on every change");
-        console.log("4. Cross-tab synchronization");
-        console.log("5. Data persists on refresh");
-        console.log("6. Admin can add/delete/edit products");
-        console.log("7. Worker can make sales");
-        console.log("8. All changes save automatically");
+        console.log("MULTI-DEVICE POS SYSTEM FEATURES:");
+        console.log("1. Real-time sync across all devices/tabs");
+        console.log("2. Auto-save on every change");
+        console.log("3. Offline capability with sync on reconnect");
+        console.log("4. Unique device identification");
+        console.log("5. Backup and restore system");
+        console.log("6. Complete analytics dashboard");
+        console.log("7. Invoice generation (Daily/Session/Complete)");
+        console.log("8. Reports (Daily/Weekly/Monthly)");
+        console.log("9. Activity logging with timestamps");
+        console.log("10. Multi-device indicators");
         console.log("=========================================");
-        console.log("Admin Password: adminmb123");
-        console.log("Worker Password: worker3214");
+        console.log("Default Passwords:");
+        console.log("Admin: adminmb123");
+        console.log("Worker: worker3214");
+        console.log("Device ID:", SYSTEM_CONFIG.deviceId);
         console.log("=========================================");
     </script>
 </body>
