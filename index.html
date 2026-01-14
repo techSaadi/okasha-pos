@@ -259,9 +259,47 @@
         .secure-data {
             display: none;
         }
+        
+        /* Real-time update indicator */
+        .real-time-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(34, 197, 94, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 99;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Data sync animation */
+        .syncing {
+            animation: syncing 1s linear infinite;
+        }
+        
+        @keyframes syncing {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
+    <!-- Real-time Indicator -->
+    <div id="real-time-indicator" class="real-time-indicator hidden">
+        <i class="fas fa-sync-alt"></i>
+        <span>Real-time Active</span>
+    </div>
+
     <!-- Theme Toggle Button -->
     <button id="theme-toggle" class="theme-toggle no-print">
         <i class="fas fa-moon text-blue-400"></i>
@@ -376,6 +414,9 @@
                     <button onclick="showPasswordManager()" class="px-3 py-1 bg-yellow-900/30 text-yellow-300 rounded-full text-xs font-medium hover:bg-yellow-900/50">
                         <i class="fas fa-key mr-1"></i> Passwords
                     </button>
+                    <button onclick="forceSync()" class="px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full text-xs font-medium hover:bg-indigo-900/50">
+                        <i class="fas fa-sync-alt mr-1"></i> Sync Now
+                    </button>
                     <button onclick="logout()" class="px-3 py-1 bg-red-900/30 text-red-300 rounded-full text-xs font-medium hover:bg-red-900/50">
                         <i class="fas fa-sign-out-alt mr-1"></i> Logout
                     </button>
@@ -387,6 +428,7 @@
                     <p id="admin-time" class="text-lg font-bold font-mono"></p>
                 </div>
                 <p class="text-xs text-gray-500 mt-2">Session: <span id="admin-session-time">00:00:00</span></p>
+                <p class="text-xs text-green-400 mt-1" id="last-update">Updated: Just now</p>
             </div>
         </header>
 
@@ -606,6 +648,9 @@
                     <button onclick="generateDailyInvoice()" class="px-3 py-1 bg-yellow-900/30 text-yellow-300 rounded-full text-xs font-medium hover:bg-yellow-900/50">
                         <i class="fas fa-receipt mr-1"></i> Daily Invoice
                     </button>
+                    <button onclick="forceSync()" class="px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full text-xs font-medium hover:bg-indigo-900/50">
+                        <i class="fas fa-sync-alt mr-1"></i> Sync Now
+                    </button>
                     <button onclick="logout()" class="px-3 py-1 bg-red-900/30 text-red-300 rounded-full text-xs font-medium hover:bg-red-900/50">
                         <i class="fas fa-sign-out-alt mr-1"></i> Logout
                     </button>
@@ -617,6 +662,7 @@
                     <p id="worker-time" class="text-lg font-bold font-mono"></p>
                 </div>
                 <p class="text-xs text-gray-500 mt-2">Today's Sales: <span id="worker-today-total">Rs. 0</span></p>
+                <p class="text-xs text-green-400 mt-1" id="worker-last-update">Updated: Just now</p>
             </div>
         </header>
 
@@ -906,7 +952,8 @@
         const SYSTEM_CONFIG = (function() {
             const config = {
                 rememberDays: 7,
-                storageKey: 'okasha_pos_system_v3',
+                storageKey: 'okasha_pos_system_v4',
+                syncInterval: 2000, // Sync every 2 seconds
                 defaultAdminPass: 'adminmb123',
                 defaultWorkerPass: 'worker3214'
             };
@@ -921,8 +968,10 @@
         let currentRole = 'admin';
         let sessionStartTime = null;
         let sessionTimer = null;
+        let syncTimer = null;
         let workerSessionSales = [];
         let charts = {};
+        let lastUpdateTime = Date.now();
         
         // ==================== ENCRYPTED PASSWORD MANAGEMENT ====================
         let systemPasswords = {
@@ -932,7 +981,9 @@
         
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("Okasha POS System v3.0 Initializing...");
+            console.log("Okasha POS System v4.0 Initializing...");
+            console.log("REAL-TIME UPDATES: ENABLED");
+            
             loadAllData();
             updateClocks();
             setInterval(updateClocks, 1000);
@@ -941,13 +992,19 @@
             setupEventListeners();
             loadPasswords();
             
+            // Start real-time sync
+            startRealTimeSync();
+            
             // Load sample data if empty
             if(products.length === 0) {
                 initializeSampleData();
             }
             
-            console.log("System Ready!");
-            showNotification('System initialized successfully', 'success');
+            console.log("System Ready with Real-time Updates!");
+            showNotification('System initialized with real-time updates', 'success');
+            
+            // Show real-time indicator
+            document.getElementById('real-time-indicator').classList.remove('hidden');
         });
         
         function setupEventListeners() {
@@ -989,8 +1046,131 @@
                     closeAllModals();
                 }
             });
+            
+            // Setup real-time search
+            setupRealTimeSearch();
         }
         
+        // ==================== REAL-TIME SYNC SYSTEM ====================
+        function startRealTimeSync() {
+            if (syncTimer) clearInterval(syncTimer);
+            
+            syncTimer = setInterval(function() {
+                const adminDashboard = document.getElementById('admin-dashboard');
+                const workerDashboard = document.getElementById('worker-dashboard');
+                
+                if ((adminDashboard && !adminDashboard.classList.contains('hidden')) ||
+                    (workerDashboard && !workerDashboard.classList.contains('hidden'))) {
+                    
+                    // Check for changes in localStorage
+                    checkForExternalUpdates();
+                    
+                    // Update timestamps
+                    updateLastUpdateTime();
+                }
+            }, SYSTEM_CONFIG.syncInterval);
+            
+            console.log("Real-time sync started (every " + SYSTEM_CONFIG.syncInterval + "ms)");
+        }
+        
+        function checkForExternalUpdates() {
+            try {
+                const savedData = localStorage.getItem(SYSTEM_CONFIG.storageKey);
+                if (savedData) {
+                    const data = JSON.parse(savedData);
+                    const remoteUpdateTime = data.lastUpdateTime || 0;
+                    
+                    if (remoteUpdateTime > lastUpdateTime) {
+                        console.log("External update detected, refreshing data...");
+                        loadAllData();
+                        updateAllDashboards();
+                        lastUpdateTime = remoteUpdateTime;
+                        
+                        // Show notification only if user is active
+                        if (document.hasFocus()) {
+                            showNotification('Data updated from another session', 'info');
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error("Error checking for external updates:", e);
+            }
+        }
+        
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-GB', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            const lastUpdateElement = document.getElementById('last-update');
+            const workerLastUpdateElement = document.getElementById('worker-last-update');
+            
+            if (lastUpdateElement) {
+                lastUpdateElement.textContent = `Updated: ${timeStr}`;
+            }
+            if (workerLastUpdateElement) {
+                workerLastUpdateElement.textContent = `Updated: ${timeStr}`;
+            }
+        }
+        
+        function forceSync() {
+            console.log("Manual sync triggered");
+            showNotification('Synchronizing data...', 'info');
+            
+            // Load latest data
+            loadAllData();
+            
+            // Update all dashboards
+            updateAllDashboards();
+            
+            // Update timestamp
+            lastUpdateTime = Date.now();
+            
+            // Show success
+            setTimeout(() => {
+                showNotification('Data synchronized successfully', 'success');
+            }, 500);
+        }
+        
+        // ==================== CENTRALIZED UPDATE FUNCTION ====================
+        function updateAllDashboards() {
+            console.log("Updating all dashboards in real-time...");
+            
+            // Update last update time
+            lastUpdateTime = Date.now();
+            
+            // Save data first
+            saveAllData();
+            
+            // Check which dashboard is active and update accordingly
+            const adminDashboard = document.getElementById('admin-dashboard');
+            const workerDashboard = document.getElementById('worker-dashboard');
+            
+            if (adminDashboard && !adminDashboard.classList.contains('hidden')) {
+                console.log("Updating Admin Dashboard");
+                updateAdminDashboard();
+            }
+            
+            if (workerDashboard && !workerDashboard.classList.contains('hidden')) {
+                console.log("Updating Worker Dashboard");
+                updateWorkerDashboard();
+            }
+            
+            // Update analytics if open
+            const analyticsModal = document.getElementById('analytics-modal');
+            if (analyticsModal && analyticsModal.classList.contains('active')) {
+                console.log("Refreshing analytics charts");
+                setTimeout(initializeCharts, 100);
+            }
+            
+            // Update last update time display
+            updateLastUpdateTime();
+        }
+        
+        // ==================== THEME TOGGLE ====================
         function toggleTheme() {
             const body = document.body;
             const themeToggle = document.getElementById('theme-toggle');
@@ -1023,22 +1203,29 @@
                     products = data.products || [];
                     sales = data.sales || [];
                     activityLog = data.activityLog || [];
+                    
+                    // Get last update time from storage
+                    lastUpdateTime = data.lastUpdateTime || Date.now();
+                    
                     console.log("Data loaded from storage:", {
                         products: products.length,
                         sales: sales.length,
-                        activityLog: activityLog.length
+                        activityLog: activityLog.length,
+                        lastUpdate: new Date(lastUpdateTime).toLocaleTimeString()
                     });
                 } else {
                     console.log("No saved data found, initializing new");
                     products = [];
                     sales = [];
                     activityLog = [];
+                    lastUpdateTime = Date.now();
                 }
             } catch(e) {
                 console.error("Error loading data:", e);
                 products = [];
                 sales = [];
                 activityLog = [];
+                lastUpdateTime = Date.now();
             }
         }
         
@@ -1048,10 +1235,11 @@
                     products: products,
                     sales: sales,
                     activityLog: activityLog,
-                    lastUpdated: new Date().toISOString()
+                    lastUpdateTime: lastUpdateTime,
+                    savedAt: new Date().toISOString()
                 };
                 localStorage.setItem(SYSTEM_CONFIG.storageKey, JSON.stringify(data));
-                console.log("Data saved successfully");
+                console.log("Data saved successfully at", new Date().toLocaleTimeString());
             } catch(e) {
                 console.error("Error saving data:", e);
                 showNotification('Error saving data', 'error');
@@ -1201,6 +1389,7 @@
             }
             
             sales = sampleSales;
+            lastUpdateTime = Date.now();
             saveAllData();
             console.log("Sample data initialized with", sampleProducts.length, "products and", sampleSales.length, "sales");
         }
@@ -1348,16 +1537,24 @@
                     const adminDashboard = document.getElementById('admin-dashboard');
                     if(adminDashboard) {
                         adminDashboard.classList.remove('hidden');
+                        
+                        // Load latest data
+                        loadAllData();
                         updateAdminDashboard();
-                        showNotification('Welcome Admin! Dashboard loaded successfully.', 'success');
+                        
+                        showNotification('Welcome Admin! Real-time dashboard loaded.', 'success');
                     }
                 } else {
                     const workerDashboard = document.getElementById('worker-dashboard');
                     if(workerDashboard) {
                         workerDashboard.classList.remove('hidden');
                         workerSessionSales = [];
+                        
+                        // Load latest data
+                        loadAllData();
                         updateWorkerDashboard();
-                        showNotification('Welcome Worker! Ready for sales.', 'success');
+                        
+                        showNotification('Welcome Worker! Ready for real-time sales.', 'success');
                     }
                 }
                 
@@ -1381,6 +1578,7 @@
         function logout() {
             if(confirm('Are you sure you want to logout?')) {
                 if(sessionTimer) clearInterval(sessionTimer);
+                if(syncTimer) clearInterval(syncTimer);
                 
                 logActivity('logout', `${currentRole} logged out`);
                 
@@ -1398,6 +1596,9 @@
                     const passwordInput = document.getElementById('password');
                     if(passwordInput) passwordInput.value = '';
                 }
+                
+                // Hide real-time indicator
+                document.getElementById('real-time-indicator').classList.add('hidden');
                 
                 showNotification('Logged out successfully', 'info');
             }
@@ -2028,7 +2229,7 @@
                                         <span class="font-bold text-green-400">Rs. ${amount.toLocaleString()}</span>
                                     </div>
                                 `).join('')}
-                            </div>
+                        </div>
                         </div>
                         
                         <div>
@@ -2392,12 +2593,9 @@
             };
             
             products.push(product);
-            saveAllData();
             
-            updateAdminDashboard();
-            if(document.getElementById('worker-dashboard') && !document.getElementById('worker-dashboard').classList.contains('hidden')) {
-                updateWorkerDashboard();
-            }
+            // REAL-TIME UPDATE: Update all dashboards
+            updateAllDashboards();
             
             if(nameInput) nameInput.value = '';
             if(costInput) costInput.value = '';
@@ -2520,17 +2718,18 @@
                 `;
             }).join('');
             
+            // Setup search functionality
             const searchInput = document.getElementById('admin-search');
             if(searchInput) {
-                searchInput.addEventListener('input', function() {
+                searchInput.oninput = function() {
                     const term = this.value.toLowerCase();
-                    const items = container.querySelectorAll('.bg-slate-800\\/50');
+                    const items = container.querySelectorAll('.animate-fadeIn');
                     
                     items.forEach(item => {
                         const text = item.textContent.toLowerCase();
                         item.style.display = text.includes(term) ? 'block' : 'none';
                     });
-                });
+                };
             }
         }
         
@@ -2657,11 +2856,8 @@
             const newQty = prompt('Edit quantity:', product.quantity);
             if(newQty !== null && !isNaN(newQty)) product.quantity = parseInt(newQty);
             
-            saveAllData();
-            updateAdminDashboard();
-            if(document.getElementById('worker-dashboard') && !document.getElementById('worker-dashboard').classList.contains('hidden')) {
-                updateWorkerDashboard();
-            }
+            // REAL-TIME UPDATE: Update all dashboards
+            updateAllDashboards();
             
             showNotification('Product updated successfully', 'success');
             logActivity('product_updated', `Updated ${product.name}`);
@@ -2673,11 +2869,9 @@
             
             if(confirm(`Are you sure you want to delete "${product.name}"?`)) {
                 products = products.filter(p => p.id !== id);
-                saveAllData();
-                updateAdminDashboard();
-                if(document.getElementById('worker-dashboard') && !document.getElementById('worker-dashboard').classList.contains('hidden')) {
-                    updateWorkerDashboard();
-                }
+                
+                // REAL-TIME UPDATE: Update all dashboards
+                updateAllDashboards();
                 
                 showNotification(`"${product.name}" deleted from inventory`, 'success');
                 logActivity('product_deleted', `Deleted ${product.name}`);
@@ -2685,15 +2879,19 @@
         }
         
         function refreshAdmin() {
-            updateAdminDashboard();
-            showNotification('Dashboard refreshed', 'info');
+            // Force reload from storage and update
+            loadAllData();
+            updateAllDashboards();
+            showNotification('Dashboard refreshed with latest data', 'info');
         }
         
         function clearSalesHistory() {
             if(confirm('Clear all sales history? This action cannot be undone.')) {
                 sales = [];
-                saveAllData();
-                updateAdminDashboard();
+                
+                // REAL-TIME UPDATE: Update all dashboards
+                updateAllDashboards();
+                
                 showNotification('Sales history cleared', 'success');
                 logActivity('sales_cleared', 'Cleared all sales history');
             }
@@ -2777,9 +2975,10 @@
                 `;
             }).join('');
             
+            // Setup search functionality
             const searchInput = document.getElementById('worker-search');
             if(searchInput) {
-                searchInput.addEventListener('input', function() {
+                searchInput.oninput = function() {
                     const term = this.value.toLowerCase();
                     const items = container.querySelectorAll('.blue-glow');
                     
@@ -2787,7 +2986,7 @@
                         const text = item.textContent.toLowerCase();
                         item.style.display = text.includes(term) ? 'block' : 'none';
                     });
-                });
+                };
             }
         }
         
@@ -2844,12 +3043,8 @@
             workerSessionSales.push(sale);
             product.quantity -= quantity;
             
-            saveAllData();
-            
-            updateWorkerDashboard();
-            if(document.getElementById('admin-dashboard') && !document.getElementById('admin-dashboard').classList.contains('hidden')) {
-                updateAdminDashboard();
-            }
+            // REAL-TIME UPDATE: Update all dashboards
+            updateAllDashboards();
             
             showNotification(`Sold ${product.name} x${quantity} for Rs. ${sale.total.toLocaleString()}`, 'success');
             logActivity('sale', `${currentUser ? currentUser.name : 'Worker'} sold ${product.name} x${quantity}`, sale.total);
@@ -2889,12 +3084,8 @@
             sales.push(sale);
             workerSessionSales.push(sale);
             
-            saveAllData();
-            
-            updateWorkerDashboard();
-            if(document.getElementById('admin-dashboard') && !document.getElementById('admin-dashboard').classList.contains('hidden')) {
-                updateAdminDashboard();
-            }
+            // REAL-TIME UPDATE: Update all dashboards
+            updateAllDashboards();
             
             if(productInput) productInput.value = '';
             if(priceInput) priceInput.value = '';
@@ -2964,11 +3155,47 @@
             if(searchInput) {
                 searchInput.value = randomProduct.name;
                 
+                // Trigger search
                 const event = new Event('input');
                 searchInput.dispatchEvent(event);
             }
             
             showNotification(`Scanned: ${randomProduct.name} - Rs. ${randomProduct.sellPrice}`, 'info');
+        }
+        
+        // ==================== REAL-TIME SEARCH SETUP ====================
+        function setupRealTimeSearch() {
+            // Admin search
+            const adminSearch = document.getElementById('admin-search');
+            if (adminSearch) {
+                adminSearch.addEventListener('input', function() {
+                    const term = this.value.toLowerCase();
+                    const container = document.getElementById('admin-products-list');
+                    if (container) {
+                        const items = container.querySelectorAll('.animate-fadeIn');
+                        items.forEach(item => {
+                            const text = item.textContent.toLowerCase();
+                            item.style.display = text.includes(term) ? 'block' : 'none';
+                        });
+                    }
+                });
+            }
+            
+            // Worker search
+            const workerSearch = document.getElementById('worker-search');
+            if (workerSearch) {
+                workerSearch.addEventListener('input', function() {
+                    const term = this.value.toLowerCase();
+                    const container = document.getElementById('worker-products-grid');
+                    if (container) {
+                        const items = container.querySelectorAll('.blue-glow');
+                        items.forEach(item => {
+                            const text = item.textContent.toLowerCase();
+                            item.style.display = text.includes(term) ? 'block' : 'none';
+                        });
+                    }
+                });
+            }
         }
         
         // ==================== UTILITY FUNCTIONS ====================
@@ -3061,36 +3288,22 @@
             }
         }
         
-        // ==================== SYSTEM READY ====================
-        console.log("=========================================");
-        console.log("Okasha Communication POS System v3.0");
-        console.log("=========================================");
-        console.log("Features:");
-        console.log("✓ Analytics Charts Working");
-        console.log("✓ Reports Generation Working");
-        console.log("✓ Invoice System Working");
-        console.log("✓ Data Persistence");
-        console.log("✓ Password Management");
-        console.log("✓ Light/Dark Theme");
-        console.log("✓ Export Functionality");
-        console.log("✓ Secure System");
-        console.log("=========================================");
-        console.log("Admin Password: adminmb123");
-        console.log("Worker Password: worker3214");
-        console.log("=========================================");
-        
-        // Add publish button
-        setTimeout(() => {
-            const adminHeader = document.querySelector('#admin-dashboard header');
-            if(adminHeader) {
-                const publishBtn = document.createElement('button');
-                publishBtn.className = 'px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full text-xs font-medium hover:bg-indigo-900/50 no-print';
-                publishBtn.innerHTML = '<i class="fas fa-check-circle mr-1"></i> System Ready';
-                publishBtn.onclick = () => showNotification('System is fully operational and ready for use!', 'success');
-                adminHeader.querySelector('.flex-wrap').appendChild(publishBtn);
+        // ==================== BROWSER TAB SYNC ====================
+        // Listen for storage changes from other tabs
+        window.addEventListener('storage', function(event) {
+            if (event.key === SYSTEM_CONFIG.storageKey) {
+                console.log("Storage changed in another tab, updating...");
+                loadAllData();
+                updateAllDashboards();
+                
+                // Show notification only if this tab is active
+                if (document.hasFocus()) {
+                    showNotification('Data updated from another tab', 'info');
+                }
             }
-        }, 1000);
+        });
         
+        // ==================== SECURITY MEASURES ====================
         // Prevent right-click to hide code
         document.addEventListener('contextmenu', function(e) {
             if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
@@ -3106,6 +3319,22 @@
                 showNotification('Developer tools are disabled for security', 'warning');
             }
         });
+        
+        // ==================== FINAL SYSTEM READY MESSAGE ====================
+        console.log("=========================================");
+        console.log("REAL-TIME FEATURES ACTIVE:");
+        console.log("1. Auto-sync every 2 seconds");
+        console.log("2. Cross-tab synchronization");
+        console.log("3. Instant dashboard updates");
+        console.log("4. Live search functionality");
+        console.log("5. Data persistence across sessions");
+        console.log("=========================================");
+        console.log("TESTING REAL-TIME UPDATES:");
+        console.log("- Open in two browser tabs");
+        console.log("- Login as admin in one, worker in another");
+        console.log("- Add product in admin → Watch appear in worker");
+        console.log("- Make sale in worker → Watch stock update in admin");
+        console.log("=========================================");
     </script>
 </body>
 </html>
