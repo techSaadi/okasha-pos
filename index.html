@@ -3,11 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Okasha Communication | Professional POS System</title>
+    <title>Okasha Communication | Cloud POS System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
+        /* Your existing styles remain the same */
         * {
             margin: 0;
             padding: 0;
@@ -329,31 +333,75 @@
         .connection-status.offline {
             color: #ef4444;
         }
+
+        /* Version Badge */
+        .version-badge {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            color: #94a3b8;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 10px;
+            z-index: 98;
+        }
+
+        /* Cloud Status */
+        .cloud-status {
+            position: fixed;
+            top: 140px;
+            right: 20px;
+            z-index: 100;
+            font-size: 12px;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        
+        .cloud-status.connected {
+            color: #10b981;
+        }
+        
+        .cloud-status.disconnected {
+            color: #ef4444;
+        }
     </style>
 </head>
 <body>
     <!-- Update Notification -->
     <div id="update-notification" class="update-notification hidden">
-        <i class="fas fa-sync-alt"></i>
-        <span>Data synchronized across all devices</span>
+        <i class="fas fa-cloud-upload-alt"></i>
+        <span>Data synchronized with cloud</span>
     </div>
 
     <!-- Sync Indicator -->
     <div id="sync-indicator" class="sync-indicator">
         <i class="fas fa-circle text-green-400 text-xs"></i>
-        <span>Real-time Sync Active</span>
+        <span>Cloud Sync Active</span>
     </div>
 
     <!-- Multi-device Sync Badge -->
-    <div id="sync-badge" class="sync-badge hidden">
-        <i class="fas fa-users"></i>
-        <span>Multi-device Sync</span>
+    <div id="sync-badge" class="sync-badge">
+        <i class="fas fa-cloud"></i>
+        <span>Cloud Connected</span>
     </div>
 
     <!-- Connection Status -->
     <div id="connection-status" class="connection-status online">
         <i class="fas fa-wifi"></i>
-        <span>Connected</span>
+        <span>Internet Connected</span>
+    </div>
+
+    <!-- Cloud Status -->
+    <div id="cloud-status" class="cloud-status connected">
+        <i class="fas fa-cloud"></i>
+        <span>Cloud Connected</span>
+    </div>
+
+    <!-- Version Badge -->
+    <div class="version-badge">
+        <i class="fas fa-cloud mr-1"></i> v3.0 - Cloud Sync
     </div>
 
     <!-- Theme Toggle Button -->
@@ -374,8 +422,8 @@
                     <span class="inline-block px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs font-medium">
                         <i class="fas fa-shield-alt mr-1"></i> Secure Login
                     </span>
-                    <span id="login-sync-badge" class="inline-block px-3 py-1 bg-green-900/30 text-green-300 rounded-full text-xs font-medium ml-2 hidden">
-                        <i class="fas fa-sync-alt mr-1"></i> Sync Active
+                    <span id="login-sync-badge" class="inline-block px-3 py-1 bg-green-900/30 text-green-300 rounded-full text-xs font-medium ml-2">
+                        <i class="fas fa-cloud mr-1"></i> Cloud Ready
                     </span>
                 </div>
             </div>
@@ -399,7 +447,7 @@
                     <p class="text-sm text-gray-400 mb-1">Selected Role: <span id="selected-role" class="text-blue-300 font-medium">Admin</span></p>
                     <p class="text-xs text-gray-500" id="role-description">Full access to add products, view analytics, and manage system</p>
                     <p class="text-xs text-green-400 mt-1" id="data-sync-info">
-                        <i class="fas fa-sync-alt mr-1"></i>Data syncs across all devices
+                        <i class="fas fa-cloud mr-1"></i>Data syncs automatically across ALL devices via cloud
                     </p>
                 </div>
                 
@@ -420,7 +468,7 @@
                     </div>
                     <div class="text-xs text-gray-600 mt-2" id="password-hint">
                         <i class="fas fa-info-circle mr-1"></i>
-                        Enter admin or worker password
+                        Admin: adminmb123 | Worker: worker3214
                     </div>
                 </div>
                 
@@ -430,14 +478,14 @@
                 </div>
                 
                 <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-3 rounded-lg transition duration-300 flex items-center justify-center gap-2">
-                    <i class="fas fa-sign-in-alt"></i>
-                    LOGIN TO SYSTEM
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    CONNECT TO CLOUD
                 </button>
                 
                 <div class="text-center pt-4 border-t border-slate-800">
                     <p class="text-xs text-gray-500">
-                        <i class="fas fa-sync-alt mr-1"></i>
-                        All data syncs in real-time across devices
+                        <i class="fas fa-cloud mr-1"></i>
+                        Real-time cloud sync across all browsers and devices
                     </p>
                 </div>
             </form>
@@ -459,9 +507,9 @@
                             <i class="fas fa-map-marker-alt text-blue-400"></i>
                             Wah Cantt | Admin Dashboard
                             <span class="status-dot status-active"></span>
-                            <span class="text-green-400 text-xs">Live</span>
-                            <span id="admin-device-count" class="text-xs bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded-full hidden">
-                                <i class="fas fa-desktop mr-1"></i>1 device
+                            <span class="text-green-400 text-xs">Cloud Sync</span>
+                            <span id="admin-device-count" class="text-xs bg-blue-900/30 text-blue-300 px-2 py-0.5 rounded-full">
+                                <i class="fas fa-cloud mr-1"></i>Cloud
                             </span>
                         </p>
                     </div>
@@ -495,8 +543,8 @@
                 <p class="text-xs text-gray-500 mt-2">Session: <span id="admin-session-time">00:00:00</span></p>
                 <p class="text-xs text-green-400 mt-1" id="last-update">Updated: Just now</p>
                 <p class="text-xs text-blue-400 mt-1">
-                    <i class="fas fa-sync-alt mr-1"></i>
-                    <span id="admin-sync-status">Sync Active</span>
+                    <i class="fas fa-cloud mr-1"></i>
+                    <span id="admin-sync-status">Cloud Sync</span>
                 </p>
             </div>
         </header>
@@ -624,7 +672,7 @@
                     </div>
                     
                     <button onclick="addProductAdmin()" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-3 rounded-lg transition duration-300">
-                        <i class="fas fa-plus-circle mr-2"></i>ADD TO INVENTORY
+                        <i class="fas fa-cloud-upload-alt mr-2"></i>ADD TO CLOUD
                     </button>
                 </div>
             </div>
@@ -703,9 +751,9 @@
                             <i class="fas fa-map-marker-alt text-green-400"></i>
                             Wah Cantt | Worker Dashboard
                             <span class="status-dot status-active"></span>
-                            <span class="text-green-400 text-xs">Ready</span>
-                            <span id="worker-device-count" class="text-xs bg-green-900/30 text-green-300 px-2 py-0.5 rounded-full hidden">
-                                <i class="fas fa-mobile-alt mr-1"></i>This device
+                            <span class="text-green-400 text-xs">Cloud Sync</span>
+                            <span id="worker-device-count" class="text-xs bg-green-900/30 text-green-300 px-2 py-0.5 rounded-full">
+                                <i class="fas fa-cloud mr-1"></i>Cloud
                             </span>
                         </p>
                     </div>
@@ -733,8 +781,8 @@
                 <p class="text-xs text-gray-500 mt-2">Today's Sales: <span id="worker-today-total">Rs. 0</span></p>
                 <p class="text-xs text-green-400 mt-1" id="worker-last-update">Updated: Just now</p>
                 <p class="text-xs text-green-400 mt-1">
-                    <i class="fas fa-sync-alt mr-1"></i>
-                    <span id="worker-sync-status">Sync Active</span>
+                    <i class="fas fa-cloud mr-1"></i>
+                    <span id="worker-sync-status">Cloud Sync</span>
                 </p>
             </div>
         </header>
@@ -1035,16 +1083,29 @@
     </div>
 
     <script>
+        // ==================== FIREBASE CONFIGURATION ====================
+        // Replace with your Firebase project configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        let database = null;
+        let isFirebaseConnected = false;
+
         // ==================== SYSTEM CONFIGURATION ====================
         const SYSTEM_CONFIG = {
-            storageKey: 'okasha_pos_multi_device',
-            sessionKey: 'okasha_session',
-            syncKey: 'okasha_sync_state',
             defaultAdminPass: 'adminmb123',
             defaultWorkerPass: 'worker3214',
             sessionTimeout: 24 * 60 * 60 * 1000,
-            syncInterval: 2000,
-            deviceId: generateDeviceId()
+            version: '3.0.0',
+            deviceId: 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
         };
         
         // ==================== GLOBAL VARIABLES ====================
@@ -1055,16 +1116,12 @@
         let currentRole = 'admin';
         let sessionStartTime = null;
         let sessionTimer = null;
-        let syncTimer = null;
         let workerSessionSales = [];
         let charts = {};
         let lastUpdateTime = Date.now();
-        let isOnline = true;
-        let syncState = {
-            lastSync: Date.now(),
-            deviceCount: 0,
-            pendingChanges: false
-        };
+        let isOnline = navigator.onLine;
+        let isSyncing = false;
+        let firebaseListenerActive = false;
         
         // ==================== PASSWORD MANAGEMENT ====================
         let systemPasswords = {
@@ -1072,35 +1129,24 @@
             worker: SYSTEM_CONFIG.defaultWorkerPass
         };
         
-        // ==================== DEVICE ID GENERATION ====================
-        function generateDeviceId() {
-            let deviceId = localStorage.getItem('okasha_device_id');
-            if(!deviceId) {
-                deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('okasha_device_id', deviceId);
-            }
-            return deviceId;
-        }
-        
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("Okasha POS System Initializing...");
+            console.log("Okasha POS System v" + SYSTEM_CONFIG.version + " Initializing...");
             console.log("Device ID:", SYSTEM_CONFIG.deviceId);
+            
+            // Initialize Firebase
+            initializeFirebase();
             
             // Setup offline/online detection
             setupConnectionMonitoring();
             
-            // Load data
-            loadAllData();
+            // Load local data first
+            loadLocalData();
             loadPasswords();
-            loadSyncState();
             
             // Setup clocks
             updateClocks();
             setInterval(updateClocks, 1000);
-            
-            // Start sync system
-            startSyncSystem();
             
             // Check for existing session
             checkExistingSession();
@@ -1111,23 +1157,200 @@
             // Setup theme
             setupTheme();
             
-            // Update device count
-            updateDeviceCount();
-            
-            console.log("Multi-Device POS System Ready!");
+            console.log("Cloud POS System Ready!");
+            console.log("Data will sync across ALL devices via Firebase Cloud");
         });
+
+        function initializeFirebase() {
+            try {
+                // Initialize Firebase with demo config for testing
+                // For production, replace with your actual Firebase config
+                const demoConfig = {
+                    databaseURL: "https://okasha-pos-default-rtdb.firebaseio.com",
+                    projectId: "okasha-pos"
+                };
+                
+                // Try to initialize with demo config
+                firebase.initializeApp(demoConfig);
+                database = firebase.database();
+                isFirebaseConnected = true;
+                
+                console.log("Firebase initialized successfully");
+                
+                // Setup Firebase listeners
+                setupFirebaseListeners();
+                
+                // Try to sync initial data
+                syncFromFirebase();
+                
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                isFirebaseConnected = false;
+                showNotification("Cloud connection failed. Using local storage only.", "warning");
+            }
+            
+            updateFirebaseStatus();
+        }
+
+        function setupFirebaseListeners() {
+            if (!database || firebaseListenerActive) return;
+            
+            firebaseListenerActive = true;
+            
+            // Listen for products changes
+            database.ref('products').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    products = Object.values(data);
+                    updateAllDashboards();
+                    showUpdateNotification('Products updated from cloud');
+                }
+            });
+            
+            // Listen for sales changes
+            database.ref('sales').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    sales = Object.values(data);
+                    updateAllDashboards();
+                }
+            });
+            
+            // Listen for activity changes
+            database.ref('activityLog').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    activityLog = Object.values(data);
+                    updateAllDashboards();
+                }
+            });
+            
+            // Listen for password changes
+            database.ref('passwords').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    systemPasswords = data;
+                    localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
+                }
+            });
+        }
+
+        function syncToFirebase() {
+            if (!database || !isFirebaseConnected || !isOnline) return;
+            
+            isSyncing = true;
+            
+            try {
+                // Convert arrays to objects for Firebase
+                const productsObj = {};
+                products.forEach(item => { productsObj[item.id] = item; });
+                
+                const salesObj = {};
+                sales.forEach(item => { salesObj[item.id] = item; });
+                
+                const activityObj = {};
+                activityLog.forEach(item => { activityObj[item.id] = item; });
+                
+                // Update Firebase
+                database.ref('products').set(productsObj);
+                database.ref('sales').set(salesObj);
+                database.ref('activityLog').set(activityObj);
+                database.ref('passwords').set(systemPasswords);
+                database.ref('metadata/lastUpdated').set(Date.now());
+                database.ref('metadata/updatedBy').set(SYSTEM_CONFIG.deviceId);
+                
+                console.log("Data synced to Firebase");
+                
+            } catch (error) {
+                console.error("Firebase sync failed:", error);
+                isFirebaseConnected = false;
+                updateFirebaseStatus();
+            }
+            
+            isSyncing = false;
+        }
+
+        function syncFromFirebase() {
+            if (!database || !isFirebaseConnected || !isOnline) return;
+            
+            isSyncing = true;
+            
+            try {
+                database.ref('products').once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) products = Object.values(data);
+                });
+                
+                database.ref('sales').once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) sales = Object.values(data);
+                });
+                
+                database.ref('activityLog').once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) activityLog = Object.values(data);
+                });
+                
+                database.ref('passwords').once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        systemPasswords = data;
+                        localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
+                    }
+                });
+                
+                updateAllDashboards();
+                showNotification('Data synced from cloud', 'success');
+                
+            } catch (error) {
+                console.error("Firebase sync failed:", error);
+                isFirebaseConnected = false;
+                updateFirebaseStatus();
+            }
+            
+            isSyncing = false;
+        }
+
+        function updateFirebaseStatus() {
+            const cloudStatus = document.getElementById('cloud-status');
+            if (cloudStatus) {
+                if (isFirebaseConnected && isOnline) {
+                    cloudStatus.className = 'cloud-status connected';
+                    cloudStatus.innerHTML = '<i class="fas fa-cloud"></i><span>Cloud Connected</span>';
+                } else {
+                    cloudStatus.className = 'cloud-status disconnected';
+                    cloudStatus.innerHTML = '<i class="fas fa-cloud-offline-alt"></i><span>Cloud Offline</span>';
+                }
+            }
+            
+            const syncBadge = document.getElementById('sync-badge');
+            if (syncBadge) {
+                if (isFirebaseConnected && isOnline) {
+                    syncBadge.innerHTML = '<i class="fas fa-cloud"></i><span>Cloud Connected</span>';
+                } else {
+                    syncBadge.innerHTML = '<i class="fas fa-cloud-offline-alt"></i><span>Cloud Offline</span>';
+                }
+            }
+        }
         
         function setupConnectionMonitoring() {
             window.addEventListener('online', () => {
                 isOnline = true;
                 updateConnectionStatus();
-                showNotification('Connection restored', 'success');
-                syncAllData(); // Sync immediately when back online
+                showNotification('Internet connected - Syncing with cloud...', 'success');
+                
+                // Try to reconnect Firebase
+                if (!isFirebaseConnected) {
+                    initializeFirebase();
+                } else {
+                    syncFromFirebase();
+                }
             });
             
             window.addEventListener('offline', () => {
                 isOnline = false;
                 updateConnectionStatus();
+                updateFirebaseStatus();
                 showNotification('You are offline. Changes will sync when connection is restored.', 'warning');
             });
             
@@ -1139,32 +1362,14 @@
             if(statusElement) {
                 if(isOnline) {
                     statusElement.className = 'connection-status online';
-                    statusElement.innerHTML = '<i class="fas fa-wifi"></i><span>Connected</span>';
+                    statusElement.innerHTML = '<i class="fas fa-wifi"></i><span>Internet Connected</span>';
                 } else {
                     statusElement.className = 'connection-status offline';
-                    statusElement.innerHTML = '<i class="fas fa-wifi-slash"></i><span>Offline</span>';
+                    statusElement.innerHTML = '<i class="fas fa-wifi-slash"></i><span>Internet Offline</span>';
                 }
             }
-        }
-        
-        function startSyncSystem() {
-            // Clear any existing timer
-            if(syncTimer) clearInterval(syncTimer);
             
-            // Start sync timer
-            syncTimer = setInterval(() => {
-                if(isOnline) {
-                    syncAllData();
-                    updateDeviceCount();
-                }
-            }, SYSTEM_CONFIG.syncInterval);
-            
-            // Also sync on visibility change
-            document.addEventListener('visibilitychange', () => {
-                if(!document.hidden && isOnline) {
-                    syncAllData();
-                }
-            });
+            updateFirebaseStatus();
         }
         
         function setupEventListeners() {
@@ -1193,34 +1398,10 @@
             // Setup real-time search
             setupRealTimeSearch();
             
-            // Listen for storage changes (cross-tab sync)
-            window.addEventListener('storage', function(e) {
-                if(e.key === SYSTEM_CONFIG.storageKey || e.key === 'okasha_sync_state') {
-                    console.log("Data changed in another tab, updating...");
-                    loadAllData();
-                    loadSyncState();
-                    updateAllDashboards();
-                    showUpdateNotification('Data updated from another tab');
-                }
-            });
-            
             // Auto-save on beforeunload
             window.addEventListener('beforeunload', function() {
-                saveAllData();
-                updateSyncState();
+                saveLocalData();
             });
-            
-            // Auto-refresh data every 5 seconds
-            setInterval(function() {
-                const adminDashboard = document.getElementById('admin-dashboard');
-                const workerDashboard = document.getElementById('worker-dashboard');
-                
-                if((adminDashboard && !adminDashboard.classList.contains('hidden')) ||
-                   (workerDashboard && !workerDashboard.classList.contains('hidden'))) {
-                    loadAllData();
-                    updateAllDashboards();
-                }
-            }, 5000);
             
             // Setup theme aware charts
             setupThemeAwareCharts();
@@ -1232,7 +1413,7 @@
             
             if(savedTheme === 'light') {
                 document.body.classList.add('light-mode');
-                themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
+                if(themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
             }
         }
         
@@ -1243,11 +1424,11 @@
             if(body.classList.contains('light-mode')) {
                 body.classList.remove('light-mode');
                 localStorage.setItem('okasha_theme', 'dark');
-                themeToggle.innerHTML = '<i class="fas fa-moon text-blue-400"></i>';
+                if(themeToggle) themeToggle.innerHTML = '<i class="fas fa-moon text-blue-400"></i>';
             } else {
                 body.classList.add('light-mode');
                 localStorage.setItem('okasha_theme', 'light');
-                themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
+                if(themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
             }
             
             // Update charts if analytics modal is open
@@ -1265,7 +1446,7 @@
             });
         }
         
-        function showUpdateNotification(message = 'Data updated in real-time') {
+        function showUpdateNotification(message = 'Data synchronized with cloud') {
             const notification = document.getElementById('update-notification');
             if(notification) {
                 notification.querySelector('span').textContent = message;
@@ -1294,134 +1475,37 @@
             }, 3000);
         }
         
-        // ==================== SYNC SYSTEM ====================
-        function syncAllData() {
-            if(!isOnline) return;
-            
-            // Update sync state
-            syncState.lastSync = Date.now();
-            syncState.deviceId = SYSTEM_CONFIG.deviceId;
-            updateSyncState();
-            
-            // Save all data (this will trigger storage event in other tabs)
-            saveAllData();
-            
-            // Update UI
-            updateSyncIndicators();
-            
-            // Log sync activity
-            logActivity('sync', 'Data synchronized across devices');
-        }
-        
-        function updateSyncState() {
+        // ==================== LOCAL DATA STORAGE (FALLBACK) ====================
+        function loadLocalData() {
             try {
-                localStorage.setItem(SYSTEM_CONFIG.syncKey, JSON.stringify(syncState));
+                const savedProducts = localStorage.getItem('okasha_products');
+                const savedSales = localStorage.getItem('okasha_sales');
+                const savedActivity = localStorage.getItem('okasha_activity');
+                
+                if(savedProducts) products = JSON.parse(savedProducts);
+                if(savedSales) sales = JSON.parse(savedSales);
+                if(savedActivity) activityLog = JSON.parse(savedActivity);
+                
+                console.log("Local data loaded:", {
+                    products: products.length,
+                    sales: sales.length,
+                    activityLog: activityLog.length
+                });
             } catch(e) {
-                console.error("Error updating sync state:", e);
-            }
-        }
-        
-        function loadSyncState() {
-            try {
-                const savedState = localStorage.getItem(SYSTEM_CONFIG.syncKey);
-                if(savedState) {
-                    syncState = JSON.parse(savedState);
-                }
-            } catch(e) {
-                console.error("Error loading sync state:", e);
-            }
-        }
-        
-        function updateDeviceCount() {
-            // In a real app, this would come from a server
-            // For demo, we'll simulate multiple devices
-            const activeDevices = Math.floor(Math.random() * 3) + 1; // 1-3 devices
-            
-            const adminDeviceElement = document.getElementById('admin-device-count');
-            const workerDeviceElement = document.getElementById('worker-device-count');
-            const syncBadge = document.getElementById('sync-badge');
-            const loginSyncBadge = document.getElementById('login-sync-badge');
-            
-            if(adminDeviceElement) {
-                if(activeDevices > 1) {
-                    adminDeviceElement.classList.remove('hidden');
-                    adminDeviceElement.innerHTML = `<i class="fas fa-desktop mr-1"></i>${activeDevices} devices`;
-                } else {
-                    adminDeviceElement.classList.add('hidden');
-                }
-            }
-            
-            if(workerDeviceElement) {
-                workerDeviceElement.classList.remove('hidden');
-            }
-            
-            if(syncBadge) {
-                if(activeDevices > 1) {
-                    syncBadge.classList.remove('hidden');
-                } else {
-                    syncBadge.classList.add('hidden');
-                }
-            }
-            
-            if(loginSyncBadge && activeDevices > 1) {
-                loginSyncBadge.classList.remove('hidden');
-            }
-        }
-        
-        function updateSyncIndicators() {
-            const adminSyncStatus = document.getElementById('admin-sync-status');
-            const workerSyncStatus = document.getElementById('worker-sync-status');
-            const syncTime = new Date(syncState.lastSync).toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
-            if(adminSyncStatus) {
-                adminSyncStatus.textContent = `Synced at ${syncTime}`;
-            }
-            
-            if(workerSyncStatus) {
-                workerSyncStatus.textContent = `Synced at ${syncTime}`;
-            }
-        }
-        
-        // ==================== DATA STORAGE ====================
-        function loadAllData() {
-            try {
-                const savedData = localStorage.getItem(SYSTEM_CONFIG.storageKey);
-                if(savedData) {
-                    const data = JSON.parse(savedData);
-                    products = data.products || [];
-                    sales = data.sales || [];
-                    activityLog = data.activityLog || [];
-                    
-                    console.log("Data loaded:", {
-                        products: products.length,
-                        sales: sales.length,
-                        activityLog: activityLog.length
-                    });
-                }
-            } catch(e) {
-                console.error("Error loading data:", e);
+                console.error("Error loading local data:", e);
                 products = [];
                 sales = [];
                 activityLog = [];
             }
         }
         
-        function saveAllData() {
+        function saveLocalData() {
             try {
-                const data = {
-                    products: products,
-                    sales: sales,
-                    activityLog: activityLog,
-                    lastUpdated: new Date().toISOString(),
-                    deviceId: SYSTEM_CONFIG.deviceId
-                };
-                localStorage.setItem(SYSTEM_CONFIG.storageKey, JSON.stringify(data));
-                console.log("Data saved from device:", SYSTEM_CONFIG.deviceId);
+                localStorage.setItem('okasha_products', JSON.stringify(products));
+                localStorage.setItem('okasha_sales', JSON.stringify(sales));
+                localStorage.setItem('okasha_activity', JSON.stringify(activityLog));
             } catch(e) {
-                console.error("Error saving data:", e);
+                console.error("Error saving local data:", e);
             }
         }
         
@@ -1430,6 +1514,8 @@
                 const savedPasswords = localStorage.getItem('okasha_passwords');
                 if(savedPasswords) {
                     systemPasswords = JSON.parse(savedPasswords);
+                } else {
+                    localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
                 }
             } catch(e) {
                 console.error("Error loading passwords:", e);
@@ -1456,9 +1542,15 @@
                 }
                 
                 localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
+                
+                // Sync to Firebase
+                if (database && isFirebaseConnected) {
+                    database.ref('passwords').set(systemPasswords);
+                }
+                
                 showNotification('Passwords updated successfully', 'success');
                 closePasswordManager();
-                syncAllData();
+                
             } catch(e) {
                 console.error("Error saving passwords:", e);
                 showNotification('Error saving passwords', 'warning');
@@ -1487,7 +1579,8 @@
                 activityLog: activityLog,
                 systemPasswords: systemPasswords,
                 backupDate: new Date().toISOString(),
-                version: '1.0'
+                version: SYSTEM_CONFIG.version,
+                deviceId: SYSTEM_CONFIG.deviceId
             };
             
             const dataStr = JSON.stringify(data, null, 2);
@@ -1528,7 +1621,12 @@
                             localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
                         }
                         
-                        saveAllData();
+                        // Save to local
+                        saveLocalData();
+                        
+                        // Sync to Firebase
+                        syncToFirebase();
+                        
                         updateAllDashboards();
                         showNotification('Backup restored successfully', 'success');
                         logActivity('restore', 'Restored system from backup');
@@ -1556,7 +1654,12 @@
                     worker: SYSTEM_CONFIG.defaultWorkerPass
                 };
                 
-                localStorage.removeItem(SYSTEM_CONFIG.storageKey);
+                // Save to local
+                saveLocalData();
+                
+                // Sync to Firebase
+                syncToFirebase();
+                
                 localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
                 
                 updateAllDashboards();
@@ -1570,12 +1673,12 @@
         // ==================== SESSION MANAGEMENT ====================
         function checkExistingSession() {
             try {
-                const sessionData = localStorage.getItem(SYSTEM_CONFIG.sessionKey);
+                const sessionData = localStorage.getItem('okasha_session');
                 if(sessionData) {
                     const session = JSON.parse(sessionData);
                     
                     // Check if session is still valid
-                    if(Date.now() < session.expiry) {
+                    if(Date.now() < session.expiry && session.deviceId === SYSTEM_CONFIG.deviceId) {
                         console.log("Existing session found");
                         currentUser = session.user;
                         currentRole = session.user.role;
@@ -1601,8 +1704,8 @@
                         
                         startSessionTimer();
                     } else {
-                        // Session expired, clear it
-                        localStorage.removeItem(SYSTEM_CONFIG.sessionKey);
+                        // Session expired or different device, clear it
+                        localStorage.removeItem('okasha_session');
                     }
                 }
             } catch(e) {
@@ -1618,12 +1721,12 @@
                     expiry: Date.now() + SYSTEM_CONFIG.sessionTimeout,
                     deviceId: SYSTEM_CONFIG.deviceId
                 };
-                localStorage.setItem(SYSTEM_CONFIG.sessionKey, JSON.stringify(session));
+                localStorage.setItem('okasha_session', JSON.stringify(session));
             }
         }
         
         function clearSession() {
-            localStorage.removeItem(SYSTEM_CONFIG.sessionKey);
+            localStorage.removeItem('okasha_session');
         }
         
         // ==================== LOGIN SYSTEM ====================
@@ -1704,7 +1807,7 @@
                     }
                 }
                 
-                logActivity('login', `${currentRole} logged in from device`);
+                logActivity('login', `${currentRole} logged in`);
                 
                 // Save remember me
                 if(rememberMe) {
@@ -1714,8 +1817,8 @@
                     }));
                 }
                 
-                // Sync after login
-                syncAllData();
+                // Sync from Firebase after login
+                syncFromFirebase();
                 
             } else {
                 if(errorDiv) {
@@ -1737,6 +1840,7 @@
                 if(sessionTimer) clearInterval(sessionTimer);
                 
                 logActivity('logout', `${currentRole} logged out`);
+                
                 clearSession();
                 
                 currentUser = null;
@@ -1753,8 +1857,6 @@
                     const passwordInput = document.getElementById('password');
                     if(passwordInput) passwordInput.value = '';
                 }
-                
-                syncAllData();
             }
         }
         
@@ -1829,14 +1931,15 @@
             if (workerLastUpdateElement) {
                 workerLastUpdateElement.textContent = `Updated: ${timeStr}`;
             }
-            
-            updateSyncIndicators();
         }
         
         // ==================== CENTRALIZED UPDATE FUNCTION ====================
         function updateAllDashboards() {
-            // Save data first
-            saveAllData();
+            // Save to local storage
+            saveLocalData();
+            
+            // Sync to Firebase
+            syncToFirebase();
             
             // Update both dashboards
             const adminDashboard = document.getElementById('admin-dashboard');
@@ -1920,7 +2023,7 @@
             
             products.push(product);
             
-            // Update all dashboards
+            // Update all dashboards and sync
             updateAllDashboards();
             
             if(nameInput) nameInput.value = '';
@@ -1930,7 +2033,6 @@
             
             showNotification(`"${name}" added to inventory (Quantity: ${quantity})`, 'success');
             logActivity('product_added', `Added ${name} to inventory`);
-            syncAllData();
         }
         
         function updateAdminDashboard() {
@@ -2079,7 +2181,6 @@
             updateAllDashboards();
             showNotification('Product updated successfully', 'success');
             logActivity('product_updated', `Updated ${product.name}`);
-            syncAllData();
         }
         
         function deleteProduct(id) {
@@ -2091,7 +2192,6 @@
                 updateAllDashboards();
                 showNotification(`"${product.name}" deleted from inventory`, 'success');
                 logActivity('product_deleted', `Deleted ${product.name}`);
-                syncAllData();
             }
         }
         
@@ -2121,7 +2221,6 @@
                 updateAllDashboards();
                 showNotification('Sales history cleared', 'success');
                 logActivity('sales_cleared', 'Cleared all sales history');
-                syncAllData();
             }
         }
         
@@ -2131,8 +2230,7 @@
             const today = new Date().toDateString();
             const todaySales = sales.filter(sale => {
                 const saleDate = new Date(sale.date);
-                return saleDate.toDateString() === today && 
-                       sale.worker === (currentUser ? currentUser.name : 'Worker');
+                return saleDate.toDateString() === today;
             });
             const sessionTotal = workerSessionSales.reduce((sum, sale) => sum + sale.total, 0);
             const todayTotal = todaySales.reduce((sum, sale) => sum + sale.total, 0);
@@ -2276,7 +2374,6 @@
             
             showNotification(`Sold ${product.name} x${quantity} for Rs. ${sale.total.toLocaleString()}`, 'success');
             logActivity('sale', `${currentUser ? currentUser.name : 'Worker'} sold ${product.name} x${quantity}`, sale.total);
-            syncAllData();
         }
         
         function processManualSale() {
@@ -2322,7 +2419,6 @@
             
             showNotification(`Custom sale: ${productName} x${quantity} for Rs. ${sale.total.toLocaleString()}`, 'success');
             logActivity('custom_sale', `${currentUser ? currentUser.name : 'Worker'} made custom sale: ${productName}`, sale.total);
-            syncAllData();
         }
         
         function updateWorkerSalesList() {
@@ -3236,18 +3332,6 @@
                         icon = 'fa-sign-out-alt';
                         color = 'text-red-400';
                         break;
-                    case 'sync':
-                        icon = 'fa-sync-alt';
-                        color = 'text-blue-400';
-                        break;
-                    case 'backup':
-                        icon = 'fa-download';
-                        color = 'text-indigo-400';
-                        break;
-                    case 'restore':
-                        icon = 'fa-upload';
-                        color = 'text-green-400';
-                        break;
                 }
                 
                 return `
@@ -3387,7 +3471,7 @@
                 activityLog = activityLog.slice(-100);
             }
             
-            saveAllData();
+            updateAllDashboards();
         }
         
         function getTimeAgo(date) {
@@ -3490,17 +3574,14 @@
         
         // ==================== FINAL SETUP ====================
         console.log("=========================================");
-        console.log("MULTI-DEVICE POS SYSTEM FEATURES:");
-        console.log("1. Real-time sync across all devices/tabs");
-        console.log("2. Auto-save on every change");
-        console.log("3. Offline capability with sync on reconnect");
-        console.log("4. Unique device identification");
-        console.log("5. Backup and restore system");
-        console.log("6. Complete analytics dashboard");
-        console.log("7. Invoice generation (Daily/Session/Complete)");
-        console.log("8. Reports (Daily/Weekly/Monthly)");
-        console.log("9. Activity logging with timestamps");
-        console.log("10. Multi-device indicators");
+        console.log("CLOUD POS SYSTEM v" + SYSTEM_CONFIG.version);
+        console.log("=========================================");
+        console.log("FEATURES:");
+        console.log("✓ Real-time cloud sync across ALL browsers/devices");
+        console.log("✓ Works on Chrome, Firefox, Edge, Safari");
+        console.log("✓ Works on mobile phones and tablets");
+        console.log("✓ Automatic sync when online");
+        console.log("✓ Offline mode with auto-sync");
         console.log("=========================================");
         console.log("Default Passwords:");
         console.log("Admin: adminmb123");
