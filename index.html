@@ -7,11 +7,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <!-- Firebase SDK (Correct version for your setup) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
     <style>
-        /* Your existing styles remain the same */
+        /* Your existing styles remain exactly the same */
         * {
             margin: 0;
             padding: 0;
@@ -1084,15 +1085,16 @@
 
     <script>
         // ==================== FIREBASE CONFIGURATION ====================
-        // Replace with your Firebase project configuration
+        // Your Firebase configuration (already created)
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            databaseURL: "YOUR_DATABASE_URL",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyBUqqhPD6H9AaBKe_IvMeHfe07WLuEqkjQ",
+            authDomain: "okasha-communication.firebaseapp.com",
+            databaseURL: "https://okasha-communication-default-rtdb.firebaseio.com",
+            projectId: "okasha-communication",
+            storageBucket: "okasha-communication.firebasestorage.app",
+            messagingSenderId: "458162168412",
+            appId: "1:458162168412:web:d1d0fb735ba64691e23c99",
+            measurementId: "G-DZ80H394Y3"
         };
 
         // Initialize Firebase
@@ -1121,7 +1123,6 @@
         let lastUpdateTime = Date.now();
         let isOnline = navigator.onLine;
         let isSyncing = false;
-        let firebaseListenerActive = false;
         
         // ==================== PASSWORD MANAGEMENT ====================
         let systemPasswords = {
@@ -1140,7 +1141,7 @@
             // Setup offline/online detection
             setupConnectionMonitoring();
             
-            // Load local data first
+            // Load local data first (fallback)
             loadLocalData();
             loadPasswords();
             
@@ -1158,50 +1159,45 @@
             setupTheme();
             
             console.log("Cloud POS System Ready!");
-            console.log("Data will sync across ALL devices via Firebase Cloud");
         });
 
         function initializeFirebase() {
             try {
-                // Initialize Firebase with demo config for testing
-                // For production, replace with your actual Firebase config
-                const demoConfig = {
-                    databaseURL: "https://okasha-pos-default-rtdb.firebaseio.com",
-                    projectId: "okasha-pos"
-                };
-                
-                // Try to initialize with demo config
-                firebase.initializeApp(demoConfig);
+                // Initialize Firebase with your config
+                firebase.initializeApp(firebaseConfig);
                 database = firebase.database();
                 isFirebaseConnected = true;
                 
-                console.log("Firebase initialized successfully");
+                console.log("✅ Firebase initialized successfully");
+                console.log("Project:", firebaseConfig.projectId);
                 
                 // Setup Firebase listeners
                 setupFirebaseListeners();
                 
-                // Try to sync initial data
-                syncFromFirebase();
+                // Load data from Firebase
+                loadFromFirebase();
+                
+                // Update UI
+                updateFirebaseStatus();
+                showNotification("Connected to cloud successfully!", "success");
                 
             } catch (error) {
-                console.error("Firebase initialization failed:", error);
+                console.error("❌ Firebase initialization failed:", error);
                 isFirebaseConnected = false;
                 showNotification("Cloud connection failed. Using local storage only.", "warning");
+                updateFirebaseStatus();
             }
-            
-            updateFirebaseStatus();
         }
 
         function setupFirebaseListeners() {
-            if (!database || firebaseListenerActive) return;
-            
-            firebaseListenerActive = true;
+            if (!database) return;
             
             // Listen for products changes
             database.ref('products').on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data) {
                     products = Object.values(data);
+                    console.log("Products updated from cloud:", products.length);
                     updateAllDashboards();
                     showUpdateNotification('Products updated from cloud');
                 }
@@ -1212,6 +1208,7 @@
                 const data = snapshot.val();
                 if (data) {
                     sales = Object.values(data);
+                    console.log("Sales updated from cloud:", sales.length);
                     updateAllDashboards();
                 }
             });
@@ -1221,6 +1218,7 @@
                 const data = snapshot.val();
                 if (data) {
                     activityLog = Object.values(data);
+                    console.log("Activity updated from cloud:", activityLog.length);
                     updateAllDashboards();
                 }
             });
@@ -1231,12 +1229,62 @@
                 if (data) {
                     systemPasswords = data;
                     localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
+                    console.log("Passwords updated from cloud");
                 }
             });
         }
 
+        function loadFromFirebase() {
+            if (!database || !isFirebaseConnected) return;
+            
+            console.log("Loading data from Firebase...");
+            
+            // Load products
+            database.ref('products').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    products = Object.values(data);
+                    console.log("Products loaded:", products.length);
+                }
+            });
+            
+            // Load sales
+            database.ref('sales').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    sales = Object.values(data);
+                    console.log("Sales loaded:", sales.length);
+                }
+            });
+            
+            // Load activity
+            database.ref('activityLog').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    activityLog = Object.values(data);
+                    console.log("Activity loaded:", activityLog.length);
+                }
+            });
+            
+            // Load passwords
+            database.ref('passwords').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    systemPasswords = data;
+                    localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
+                    console.log("Passwords loaded from cloud");
+                }
+            });
+            
+            updateAllDashboards();
+        }
+
         function syncToFirebase() {
-            if (!database || !isFirebaseConnected || !isOnline) return;
+            if (!database || !isFirebaseConnected || !isOnline) {
+                // Save to local as fallback
+                saveLocalData();
+                return;
+            }
             
             isSyncing = true;
             
@@ -1251,61 +1299,30 @@
                 const activityObj = {};
                 activityLog.forEach(item => { activityObj[item.id] = item; });
                 
-                // Update Firebase
-                database.ref('products').set(productsObj);
-                database.ref('sales').set(salesObj);
-                database.ref('activityLog').set(activityObj);
-                database.ref('passwords').set(systemPasswords);
-                database.ref('metadata/lastUpdated').set(Date.now());
-                database.ref('metadata/updatedBy').set(SYSTEM_CONFIG.deviceId);
+                // Batch update Firebase
+                const updates = {};
+                updates['/products'] = productsObj;
+                updates['/sales'] = salesObj;
+                updates['/activityLog'] = activityObj;
+                updates['/passwords'] = systemPasswords;
+                updates['/metadata/lastUpdated'] = Date.now();
+                updates['/metadata/updatedBy'] = SYSTEM_CONFIG.deviceId;
                 
-                console.log("Data synced to Firebase");
-                
-            } catch (error) {
-                console.error("Firebase sync failed:", error);
-                isFirebaseConnected = false;
-                updateFirebaseStatus();
-            }
-            
-            isSyncing = false;
-        }
-
-        function syncFromFirebase() {
-            if (!database || !isFirebaseConnected || !isOnline) return;
-            
-            isSyncing = true;
-            
-            try {
-                database.ref('products').once('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) products = Object.values(data);
-                });
-                
-                database.ref('sales').once('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) sales = Object.values(data);
-                });
-                
-                database.ref('activityLog').once('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) activityLog = Object.values(data);
-                });
-                
-                database.ref('passwords').once('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        systemPasswords = data;
-                        localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
+                database.ref().update(updates, (error) => {
+                    if (error) {
+                        console.error("Firebase sync error:", error);
+                    } else {
+                        console.log("✅ Data synced to Firebase at", new Date().toLocaleTimeString());
+                        document.getElementById('last-update').textContent = `Updated: ${new Date().toLocaleTimeString()}`;
                     }
                 });
                 
-                updateAllDashboards();
-                showNotification('Data synced from cloud', 'success');
-                
             } catch (error) {
                 console.error("Firebase sync failed:", error);
                 isFirebaseConnected = false;
                 updateFirebaseStatus();
+                // Fallback to local
+                saveLocalData();
             }
             
             isSyncing = false;
@@ -1313,21 +1330,29 @@
 
         function updateFirebaseStatus() {
             const cloudStatus = document.getElementById('cloud-status');
-            if (cloudStatus) {
-                if (isFirebaseConnected && isOnline) {
+            const syncIndicator = document.getElementById('sync-indicator');
+            const syncBadge = document.getElementById('sync-badge');
+            
+            if (isFirebaseConnected && isOnline) {
+                if (cloudStatus) {
                     cloudStatus.className = 'cloud-status connected';
                     cloudStatus.innerHTML = '<i class="fas fa-cloud"></i><span>Cloud Connected</span>';
-                } else {
+                }
+                if (syncIndicator) {
+                    syncIndicator.innerHTML = '<i class="fas fa-circle text-green-400 text-xs"></i><span>Cloud Sync Active</span>';
+                }
+                if (syncBadge) {
+                    syncBadge.innerHTML = '<i class="fas fa-cloud"></i><span>Cloud Connected</span>';
+                }
+            } else {
+                if (cloudStatus) {
                     cloudStatus.className = 'cloud-status disconnected';
                     cloudStatus.innerHTML = '<i class="fas fa-cloud-offline-alt"></i><span>Cloud Offline</span>';
                 }
-            }
-            
-            const syncBadge = document.getElementById('sync-badge');
-            if (syncBadge) {
-                if (isFirebaseConnected && isOnline) {
-                    syncBadge.innerHTML = '<i class="fas fa-cloud"></i><span>Cloud Connected</span>';
-                } else {
+                if (syncIndicator) {
+                    syncIndicator.innerHTML = '<i class="fas fa-circle text-yellow-400 text-xs"></i><span>Local Storage Only</span>';
+                }
+                if (syncBadge) {
                     syncBadge.innerHTML = '<i class="fas fa-cloud-offline-alt"></i><span>Cloud Offline</span>';
                 }
             }
@@ -1343,7 +1368,8 @@
                 if (!isFirebaseConnected) {
                     initializeFirebase();
                 } else {
-                    syncFromFirebase();
+                    loadFromFirebase();
+                    syncToFirebase();
                 }
             });
             
@@ -1372,109 +1398,6 @@
             updateFirebaseStatus();
         }
         
-        function setupEventListeners() {
-            // Login form
-            const loginForm = document.getElementById('login-form');
-            if(loginForm) {
-                loginForm.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    handleLogin();
-                });
-            }
-            
-            // Theme toggle
-            const themeToggle = document.getElementById('theme-toggle');
-            if(themeToggle) {
-                themeToggle.addEventListener('click', toggleTheme);
-            }
-            
-            // Close modals on escape
-            document.addEventListener('keydown', function(e) {
-                if(e.key === 'Escape') {
-                    closeAllModals();
-                }
-            });
-            
-            // Setup real-time search
-            setupRealTimeSearch();
-            
-            // Auto-save on beforeunload
-            window.addEventListener('beforeunload', function() {
-                saveLocalData();
-            });
-            
-            // Setup theme aware charts
-            setupThemeAwareCharts();
-        }
-        
-        function setupTheme() {
-            const savedTheme = localStorage.getItem('okasha_theme');
-            const themeToggle = document.getElementById('theme-toggle');
-            
-            if(savedTheme === 'light') {
-                document.body.classList.add('light-mode');
-                if(themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
-            }
-        }
-        
-        function toggleTheme() {
-            const body = document.body;
-            const themeToggle = document.getElementById('theme-toggle');
-            
-            if(body.classList.contains('light-mode')) {
-                body.classList.remove('light-mode');
-                localStorage.setItem('okasha_theme', 'dark');
-                if(themeToggle) themeToggle.innerHTML = '<i class="fas fa-moon text-blue-400"></i>';
-            } else {
-                body.classList.add('light-mode');
-                localStorage.setItem('okasha_theme', 'light');
-                if(themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
-            }
-            
-            // Update charts if analytics modal is open
-            const analyticsModal = document.getElementById('analytics-modal');
-            if(analyticsModal && analyticsModal.classList.contains('active')) {
-                setTimeout(initializeCharts, 100);
-            }
-        }
-        
-        function closeAllModals() {
-            const modals = ['analytics-modal', 'reports-modal', 'password-modal', 'invoice-modal', 'backup-modal'];
-            modals.forEach(modalId => {
-                const modal = document.getElementById(modalId);
-                if(modal) modal.classList.remove('active');
-            });
-        }
-        
-        function showUpdateNotification(message = 'Data synchronized with cloud') {
-            const notification = document.getElementById('update-notification');
-            if(notification) {
-                notification.querySelector('span').textContent = message;
-                notification.classList.remove('hidden');
-                setTimeout(() => {
-                    notification.classList.add('hidden');
-                }, 3000);
-            }
-        }
-        
-        function showNotification(message, type = 'info') {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 p-4 rounded-lg z-50 animate-fadeIn ${type === 'success' ? 'bg-green-900/90 text-green-100' : type === 'warning' ? 'bg-yellow-900/90 text-yellow-100' : 'bg-blue-900/90 text-blue-100'}`;
-            notification.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
-                    <span>${message}</span>
-                </div>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        }
-        
         // ==================== LOCAL DATA STORAGE (FALLBACK) ====================
         function loadLocalData() {
             try {
@@ -1482,9 +1405,9 @@
                 const savedSales = localStorage.getItem('okasha_sales');
                 const savedActivity = localStorage.getItem('okasha_activity');
                 
-                if(savedProducts) products = JSON.parse(savedProducts);
-                if(savedSales) sales = JSON.parse(savedSales);
-                if(savedActivity) activityLog = JSON.parse(savedActivity);
+                if(savedProducts && products.length === 0) products = JSON.parse(savedProducts);
+                if(savedSales && sales.length === 0) sales = JSON.parse(savedSales);
+                if(savedActivity && activityLog.length === 0) activityLog = JSON.parse(savedActivity);
                 
                 console.log("Local data loaded:", {
                     products: products.length,
@@ -1493,9 +1416,6 @@
                 });
             } catch(e) {
                 console.error("Error loading local data:", e);
-                products = [];
-                sales = [];
-                activityLog = [];
             }
         }
         
@@ -1514,8 +1434,6 @@
                 const savedPasswords = localStorage.getItem('okasha_passwords');
                 if(savedPasswords) {
                     systemPasswords = JSON.parse(savedPasswords);
-                } else {
-                    localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
                 }
             } catch(e) {
                 console.error("Error loading passwords:", e);
@@ -1544,9 +1462,7 @@
                 localStorage.setItem('okasha_passwords', JSON.stringify(systemPasswords));
                 
                 // Sync to Firebase
-                if (database && isFirebaseConnected) {
-                    database.ref('passwords').set(systemPasswords);
-                }
+                syncToFirebase();
                 
                 showNotification('Passwords updated successfully', 'success');
                 closePasswordManager();
@@ -1560,16 +1476,12 @@
         // ==================== BACKUP SYSTEM ====================
         function backupData() {
             const modal = document.getElementById('backup-modal');
-            if(modal) {
-                modal.classList.add('active');
-            }
+            if(modal) modal.classList.add('active');
         }
         
         function closeBackupModal() {
             const modal = document.getElementById('backup-modal');
-            if(modal) {
-                modal.classList.remove('active');
-            }
+            if(modal) modal.classList.remove('active');
         }
         
         function createBackup() {
@@ -1579,8 +1491,7 @@
                 activityLog: activityLog,
                 systemPasswords: systemPasswords,
                 backupDate: new Date().toISOString(),
-                version: SYSTEM_CONFIG.version,
-                deviceId: SYSTEM_CONFIG.deviceId
+                version: SYSTEM_CONFIG.version
             };
             
             const dataStr = JSON.stringify(data, null, 2);
@@ -1631,7 +1542,6 @@
                         showNotification('Backup restored successfully', 'success');
                         logActivity('restore', 'Restored system from backup');
                         
-                        // Clear file input
                         fileInput.value = '';
                     }
                 } catch(error) {
@@ -1644,7 +1554,7 @@
         }
         
         function resetAllData() {
-            if(confirm('Are you sure you want to reset ALL data? This cannot be undone!')) {
+            if(confirm('⚠️ Are you sure you want to reset ALL data? This cannot be undone!')) {
                 products = [];
                 sales = [];
                 activityLog = [];
@@ -1772,9 +1682,7 @@
             }
             
             if(isValid) {
-                if(errorDiv) {
-                    errorDiv.classList.add('hidden');
-                }
+                if(errorDiv) errorDiv.classList.add('hidden');
                 
                 currentUser = {
                     role: currentRole,
@@ -1788,9 +1696,7 @@
                 saveSession();
                 
                 const loginScreen = document.getElementById('login-screen');
-                if(loginScreen) {
-                    loginScreen.classList.add('hidden');
-                }
+                if(loginScreen) loginScreen.classList.add('hidden');
                 
                 if(currentRole === 'admin') {
                     const adminDashboard = document.getElementById('admin-dashboard');
@@ -1817,8 +1723,8 @@
                     }));
                 }
                 
-                // Sync from Firebase after login
-                syncFromFirebase();
+                // Load from Firebase after login
+                loadFromFirebase();
                 
             } else {
                 if(errorDiv) {
@@ -1828,9 +1734,7 @@
                 
                 if(passwordInput) {
                     passwordInput.classList.add('shake');
-                    setTimeout(() => {
-                        passwordInput.classList.remove('shake');
-                    }, 500);
+                    setTimeout(() => passwordInput.classList.remove('shake'), 500);
                 }
             }
         }
@@ -1875,9 +1779,7 @@
                     const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
                     
                     const sessionTimeElement = document.getElementById('admin-session-time');
-                    if(sessionTimeElement) {
-                        sessionTimeElement.textContent = timeStr;
-                    }
+                    if(sessionTimeElement) sessionTimeElement.textContent = timeStr;
                 }
             }, 1000);
         }
@@ -1911,7 +1813,6 @@
                 workerTime.textContent = timeStr;
             }
             
-            // Update last update time
             updateLastUpdateTime();
         }
         
@@ -1925,12 +1826,8 @@
             const lastUpdateElement = document.getElementById('last-update');
             const workerLastUpdateElement = document.getElementById('worker-last-update');
             
-            if (lastUpdateElement) {
-                lastUpdateElement.textContent = `Updated: ${timeStr}`;
-            }
-            if (workerLastUpdateElement) {
-                workerLastUpdateElement.textContent = `Updated: ${timeStr}`;
-            }
+            if (lastUpdateElement) lastUpdateElement.textContent = `Updated: ${timeStr}`;
+            if (workerLastUpdateElement) workerLastUpdateElement.textContent = `Updated: ${timeStr}`;
         }
         
         // ==================== CENTRALIZED UPDATE FUNCTION ====================
@@ -1964,18 +1861,14 @@
         function increaseQuantity(dashboard) {
             if(dashboard === 'admin') {
                 const input = document.getElementById('admin-quantity');
-                if(input) {
-                    input.value = parseInt(input.value) + 1;
-                }
+                if(input) input.value = parseInt(input.value) + 1;
             }
         }
         
         function decreaseQuantity(dashboard) {
             if(dashboard === 'admin') {
                 const input = document.getElementById('admin-quantity');
-                if(input && parseInt(input.value) > 1) {
-                    input.value = parseInt(input.value) - 1;
-                }
+                if(input && parseInt(input.value) > 1) input.value = parseInt(input.value) - 1;
             }
         }
         
@@ -2489,41 +2382,6 @@
             showNotification(`Scanned: ${randomProduct.name} - Rs. ${randomProduct.sellPrice}`, 'success');
         }
         
-        // ==================== REAL-TIME SEARCH ====================
-        function setupRealTimeSearch() {
-            // Admin search
-            const adminSearch = document.getElementById('admin-search');
-            if (adminSearch) {
-                adminSearch.addEventListener('input', function() {
-                    const term = this.value.toLowerCase();
-                    const container = document.getElementById('admin-products-list');
-                    if (container) {
-                        const items = container.querySelectorAll('.animate-fadeIn');
-                        items.forEach(item => {
-                            const text = item.textContent.toLowerCase();
-                            item.style.display = text.includes(term) ? 'block' : 'none';
-                        });
-                    }
-                });
-            }
-            
-            // Worker search
-            const workerSearch = document.getElementById('worker-search');
-            if (workerSearch) {
-                workerSearch.addEventListener('input', function() {
-                    const term = this.value.toLowerCase();
-                    const container = document.getElementById('worker-products-grid');
-                    if (container) {
-                        const items = container.querySelectorAll('.blue-glow');
-                        items.forEach(item => {
-                            const text = item.textContent.toLowerCase();
-                            item.style.display = text.includes(term) ? 'block' : 'none';
-                        });
-                    }
-                });
-            }
-        }
-        
         // ==================== ANALYTICS FUNCTIONS ====================
         function showAnalytics() {
             const modal = document.getElementById('analytics-modal');
@@ -2997,17 +2855,13 @@
         
         function closeInvoice() {
             const modal = document.getElementById('invoice-modal');
-            if(modal) {
-                modal.classList.remove('active');
-            }
+            if(modal) modal.classList.remove('active');
         }
         
         // ==================== REPORTS FUNCTIONS ====================
         function showReports() {
             const modal = document.getElementById('reports-modal');
-            if(modal) {
-                modal.classList.add('active');
-            }
+            if(modal) modal.classList.add('active');
         }
         
         function closeReports() {
@@ -3366,9 +3220,7 @@
         
         function closePasswordManager() {
             const modal = document.getElementById('password-modal');
-            if(modal) {
-                modal.classList.remove('active');
-            }
+            if(modal) modal.classList.remove('active');
         }
         
         function toggleAdminPassword() {
@@ -3404,6 +3256,98 @@
         }
         
         // ==================== UTILITY FUNCTIONS ====================
+        function setupEventListeners() {
+            // Login form
+            const loginForm = document.getElementById('login-form');
+            if(loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleLogin();
+                });
+            }
+            
+            // Theme toggle
+            const themeToggle = document.getElementById('theme-toggle');
+            if(themeToggle) {
+                themeToggle.addEventListener('click', toggleTheme);
+            }
+            
+            // Close modals on escape
+            document.addEventListener('keydown', function(e) {
+                if(e.key === 'Escape') {
+                    closeAllModals();
+                }
+            });
+        }
+        
+        function setupTheme() {
+            const savedTheme = localStorage.getItem('okasha_theme');
+            const themeToggle = document.getElementById('theme-toggle');
+            
+            if(savedTheme === 'light') {
+                document.body.classList.add('light-mode');
+                if(themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
+            }
+        }
+        
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('theme-toggle');
+            
+            if(body.classList.contains('light-mode')) {
+                body.classList.remove('light-mode');
+                localStorage.setItem('okasha_theme', 'dark');
+                if(themeToggle) themeToggle.innerHTML = '<i class="fas fa-moon text-blue-400"></i>';
+            } else {
+                body.classList.add('light-mode');
+                localStorage.setItem('okasha_theme', 'light');
+                if(themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-500"></i>';
+            }
+            
+            // Update charts if analytics modal is open
+            const analyticsModal = document.getElementById('analytics-modal');
+            if(analyticsModal && analyticsModal.classList.contains('active')) {
+                setTimeout(initializeCharts, 100);
+            }
+        }
+        
+        function closeAllModals() {
+            const modals = ['analytics-modal', 'reports-modal', 'password-modal', 'invoice-modal', 'backup-modal'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if(modal) modal.classList.remove('active');
+            });
+        }
+        
+        function showUpdateNotification(message = 'Data synchronized with cloud') {
+            const notification = document.getElementById('update-notification');
+            if(notification) {
+                notification.querySelector('span').textContent = message;
+                notification.classList.remove('hidden');
+                setTimeout(() => {
+                    notification.classList.add('hidden');
+                }, 3000);
+            }
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg z-50 animate-fadeIn ${type === 'success' ? 'bg-green-900/90 text-green-100' : type === 'warning' ? 'bg-yellow-900/90 text-yellow-100' : 'bg-blue-900/90 text-blue-100'}`;
+            notification.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
         function calculateTotalProfit() {
             return sales.reduce((sum, sale) => {
                 if(sale.isCustom) {
@@ -3556,37 +3500,14 @@
                 .slice(0, 5);
         }
         
-        // ==================== THEME AWARE CHARTS ====================
-        function setupThemeAwareCharts() {
-            // Reinitialize charts when theme changes
-            const themeToggle = document.getElementById('theme-toggle');
-            if(themeToggle) {
-                themeToggle.addEventListener('click', function() {
-                    setTimeout(() => {
-                        const analyticsModal = document.getElementById('analytics-modal');
-                        if(analyticsModal && analyticsModal.classList.contains('active')) {
-                            initializeCharts();
-                        }
-                    }, 100);
-                });
-            }
-        }
-        
-        // ==================== FINAL SETUP ====================
         console.log("=========================================");
-        console.log("CLOUD POS SYSTEM v" + SYSTEM_CONFIG.version);
+        console.log("✅ CLOUD POS SYSTEM v" + SYSTEM_CONFIG.version);
         console.log("=========================================");
-        console.log("FEATURES:");
-        console.log("✓ Real-time cloud sync across ALL browsers/devices");
-        console.log("✓ Works on Chrome, Firefox, Edge, Safari");
-        console.log("✓ Works on mobile phones and tablets");
-        console.log("✓ Automatic sync when online");
-        console.log("✓ Offline mode with auto-sync");
-        console.log("=========================================");
+        console.log("Firebase Project:", firebaseConfig.projectId);
+        console.log("Device ID:", SYSTEM_CONFIG.deviceId);
         console.log("Default Passwords:");
         console.log("Admin: adminmb123");
         console.log("Worker: worker3214");
-        console.log("Device ID:", SYSTEM_CONFIG.deviceId);
         console.log("=========================================");
     </script>
 </body>
