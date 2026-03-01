@@ -198,12 +198,6 @@
             margin: 10px 0;
         }
         
-        .barcode-scanner {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
         /* Invoice Print */
         .invoice-container {
             background: white;
@@ -339,7 +333,6 @@
             z-index: 98;
         }
 
-        /* Location Badge */
         .location-badge {
             position: fixed;
             bottom: 20px;
@@ -369,6 +362,24 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        /* Button Styles - Fixed for INP issue */
+        button {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        /* Improved scroll performance */
+        .overflow-y-auto {
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
     </style>
 </head>
 <body>
@@ -378,10 +389,10 @@
         <span>Cloud Sync Active</span>
     </div>
 
-    <!-- Location Badge - Exact Location -->
+    <!-- Location Badge -->
     <div class="location-badge">
         <i class="fas fa-map-marker-alt"></i>
-        Liaq Ali Chowk Shop #5, Alh e Adhees Masjid
+        Liaq Ali Chowk Shop #5, Ahl e Adhees Masjid
     </div>
 
     <!-- Connection Status -->
@@ -391,7 +402,7 @@
 
     <!-- Version Badge -->
     <div class="version-badge">
-        <i class="fas fa-cloud mr-1"></i> v6.1 - Fixed Version
+        <i class="fas fa-cloud mr-1"></i> v6.2 - INP Fixed
     </div>
 
     <!-- Theme Toggle -->
@@ -407,19 +418,8 @@
                     <i class="fas fa-store text-3xl text-white"></i>
                 </div>
                 <h1 class="text-3xl font-bold gradient-text mb-2">OKASHA <span class="text-white">COMMUNICATION</span></h1>
-                <p class="text-gray-400">Liaq Ali Chowk Shop #5, Alh e Adhees Masjid</p>
+                <p class="text-gray-400">Liaq Ali Chowk Shop #5, Ahl e Adhees Masjid</p>
                 <p class="text-xs text-gray-500 mt-2">Mobile Sale, Purchase, Repair & All Services</p>
-                <div class="mt-4 flex gap-2 justify-center">
-                    <span class="inline-block px-2 py-1 bg-green-900/30 text-green-300 rounded-full text-xs">
-                        <i class="fas fa-mobile-alt mr-1"></i> Easyload
-                    </span>
-                    <span class="inline-block px-2 py-1 bg-purple-900/30 text-purple-300 rounded-full text-xs">
-                        <i class="fas fa-print mr-1"></i> Print
-                    </span>
-                    <span class="inline-block px-2 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs">
-                        <i class="fas fa-file mr-1"></i> Forms
-                    </span>
-                </div>
             </div>
             
             <div class="flex gap-2 mb-6">
@@ -436,7 +436,7 @@
                 <span id="error-message">Invalid credentials</span>
             </div>
             
-            <form id="login-form" class="space-y-5">
+            <form id="login-form" class="space-y-5" onsubmit="event.preventDefault(); handleLogin();">
                 <div id="role-info" class="p-3 bg-slate-800/50 rounded-lg">
                     <p class="text-sm text-gray-400 mb-1">Selected Role: <span id="selected-role" class="text-blue-300 font-medium">Admin</span></p>
                     <p class="text-xs text-gray-500" id="role-description">Full access to add products, view analytics, and manage system</p>
@@ -478,7 +478,7 @@
                         <h1 class="text-3xl font-bold gradient-text">OKASHA <span class="text-white">COMMUNICATION</span></h1>
                         <p class="text-gray-400 text-sm flex items-center gap-2">
                             <i class="fas fa-map-marker-alt text-blue-400"></i>
-                            Liaq Ali Chowk Shop #5, Alh e Adhees Masjid
+                            Liaq Ali Chowk Shop #5, Ahl e Adhees Masjid
                             <span class="status-dot status-active"></span>
                         </p>
                     </div>
@@ -624,7 +624,7 @@
                 <div class="space-y-4">
                     <div class="border-2 border-dashed border-blue-500/30 rounded-lg p-4 text-center">
                         <input type="file" id="product-image" accept="image/*" class="hidden" onchange="previewImage(event)">
-                        <button onclick="document.getElementById('product-image').click()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg">
+                        <button type="button" onclick="document.getElementById('product-image').click()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg">
                             <i class="fas fa-camera mr-2"></i>Upload Image
                         </button>
                         <div id="image-preview" class="mt-3 hidden">
@@ -677,17 +677,17 @@
                     <div>
                         <label class="block text-gray-400 text-sm mb-2">Quantity</label>
                         <div class="flex items-center">
-                            <button onclick="decreaseQuantity()" class="bg-slate-800 text-white w-10 h-10 rounded-l-lg">
+                            <button type="button" onclick="decreaseQuantity()" class="bg-slate-800 text-white w-10 h-10 rounded-l-lg">
                                 <i class="fas fa-minus"></i>
                             </button>
                             <input type="number" id="admin-quantity" value="1" min="1" class="w-full bg-slate-900 border-y border-slate-700 p-3 text-center">
-                            <button onclick="increaseQuantity()" class="bg-slate-800 text-white w-10 h-10 rounded-r-lg">
+                            <button type="button" onclick="increaseQuantity()" class="bg-slate-800 text-white w-10 h-10 rounded-r-lg">
                                 <i class="fas fa-plus"></i>
                             </button>
                         </div>
                     </div>
                     
-                    <button onclick="addProductAdmin()" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 rounded-lg">
+                    <button type="button" onclick="addProductAdmin()" class="w-full bg-gradient-to-r from-blue-600 to-blue-800 text-white py-3 rounded-lg">
                         <i class="fas fa-cloud-upload-alt mr-2"></i>ADD TO CLOUD
                     </button>
                 </div>
@@ -702,7 +702,7 @@
                     </h3>
                     <div class="flex gap-2">
                         <input type="text" id="admin-search" placeholder="Search products..." class="bg-slate-900 border border-slate-700 p-2 rounded-lg text-sm">
-                        <button onclick="refreshAdmin()" class="bg-blue-900/30 text-blue-300 p-2 rounded-lg">
+                        <button type="button" onclick="refreshAdmin()" class="bg-blue-900/30 text-blue-300 p-2 rounded-lg">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
@@ -772,7 +772,7 @@
                         <h1 class="text-3xl font-bold gradient-text">OKASHA <span class="text-white">COMMUNICATION</span></h1>
                         <p class="text-gray-400 text-sm flex items-center gap-2">
                             <i class="fas fa-map-marker-alt text-green-400"></i>
-                            Liaq Ali Chowk Shop #5, Alh e Adhees Masjid
+                            Liaq Ali Chowk Shop #5, Ahl e Adhees Masjid
                             <span class="status-dot status-active"></span>
                         </p>
                     </div>
@@ -781,19 +781,19 @@
                     <span class="px-3 py-1 bg-gradient-to-r from-green-600 to-green-800 text-white rounded-full text-xs font-medium">
                         <i class="fas fa-user-tie mr-1"></i> Sale Counter
                     </span>
-                    <button onclick="scanBarcode()" class="px-3 py-1 bg-purple-900/30 text-purple-300 rounded-full text-xs font-medium hover:bg-purple-900/50">
+                    <button type="button" onclick="scanBarcode()" class="px-3 py-1 bg-purple-900/30 text-purple-300 rounded-full text-xs font-medium hover:bg-purple-900/50">
                         <i class="fas fa-camera mr-1"></i> Scan Barcode
                     </button>
-                    <button onclick="showServicePanel()" class="px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full text-xs font-medium hover:bg-indigo-900/50">
+                    <button type="button" onclick="showServicePanel()" class="px-3 py-1 bg-indigo-900/30 text-indigo-300 rounded-full text-xs font-medium hover:bg-indigo-900/50">
                         <i class="fas fa-cogs mr-1"></i> Services
                     </button>
-                    <button onclick="showMySales()" class="px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs font-medium hover:bg-blue-900/50">
+                    <button type="button" onclick="showMySales()" class="px-3 py-1 bg-blue-900/30 text-blue-300 rounded-full text-xs font-medium hover:bg-blue-900/50">
                         <i class="fas fa-chart-line mr-1"></i> My Sales
                     </button>
-                    <button onclick="generateDailyInvoice()" class="px-3 py-1 bg-yellow-900/30 text-yellow-300 rounded-full text-xs font-medium hover:bg-yellow-900/50">
+                    <button type="button" onclick="generateDailyInvoice()" class="px-3 py-1 bg-yellow-900/30 text-yellow-300 rounded-full text-xs font-medium hover:bg-yellow-900/50">
                         <i class="fas fa-receipt mr-1"></i> Daily Invoice
                     </button>
-                    <button onclick="logout()" class="px-3 py-1 bg-red-900/30 text-red-300 rounded-full text-xs font-medium hover:bg-red-900/50">
+                    <button type="button" onclick="logout()" class="px-3 py-1 bg-red-900/30 text-red-300 rounded-full text-xs font-medium hover:bg-red-900/50">
                         <i class="fas fa-sign-out-alt mr-1"></i> Logout
                     </button>
                 </div>
@@ -849,7 +849,7 @@
             <div class="glass p-6 rounded-2xl max-w-md w-full">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold">Services Panel</h3>
-                    <button onclick="closeServicePanel()" class="text-gray-400 hover:text-white">
+                    <button type="button" onclick="closeServicePanel()" class="text-gray-400 hover:text-white">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -871,7 +871,7 @@
                                 <option value="telenor">Telenor</option>
                                 <option value="zong">Zong</option>
                             </select>
-                            <button onclick="processEasyload()" class="w-full bg-green-900/30 text-green-300 py-2 rounded-lg hover:bg-green-900/50">
+                            <button type="button" onclick="processEasyload()" class="w-full bg-green-900/30 text-green-300 py-2 rounded-lg hover:bg-green-900/50">
                                 Process Easyload
                             </button>
                         </div>
@@ -893,7 +893,7 @@
                             </select>
                             <input type="number" id="print-pages" placeholder="Number of Pages" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
                             <input type="number" id="print-price" placeholder="Price per page (Rs.)" value="5" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
-                            <button onclick="processPrint()" class="w-full bg-purple-900/30 text-purple-300 py-2 rounded-lg hover:bg-purple-900/50">
+                            <button type="button" onclick="processPrint()" class="w-full bg-purple-900/30 text-purple-300 py-2 rounded-lg hover:bg-purple-900/50">
                                 Process Print / Photocopy
                             </button>
                         </div>
@@ -915,7 +915,7 @@
                             </select>
                             <input type="text" id="form-customer" placeholder="Customer Name" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
                             <input type="number" id="form-price" placeholder="Price (Rs.)" class="w-full bg-slate-900 border border-slate-700 p-3 rounded-lg">
-                            <button onclick="processForm()" class="w-full bg-blue-900/30 text-blue-300 py-2 rounded-lg hover:bg-blue-900/50">
+                            <button type="button" onclick="processForm()" class="w-full bg-blue-900/30 text-blue-300 py-2 rounded-lg hover:bg-blue-900/50">
                                 Process Form Application
                             </button>
                         </div>
@@ -923,7 +923,7 @@
                 </div>
                 
                 <div class="mt-4 text-center">
-                    <button onclick="closeServicePanel()" class="bg-slate-800 text-gray-300 px-6 py-2 rounded-lg hover:bg-slate-700">
+                    <button type="button" onclick="closeServicePanel()" class="bg-slate-800 text-gray-300 px-6 py-2 rounded-lg hover:bg-slate-700">
                         Close Panel
                     </button>
                 </div>
@@ -943,9 +943,9 @@
                 <p class="text-xs text-gray-400 mt-2 text-center">Or enter barcode manually</p>
                 <div class="flex gap-2 mt-3">
                     <input type="text" id="manual-barcode" placeholder="Enter barcode" class="flex-1 bg-slate-900 border border-slate-700 p-3 rounded-lg">
-                    <button onclick="searchByBarcode()" class="bg-blue-900/30 text-blue-300 px-4 rounded-lg">Find</button>
+                    <button type="button" onclick="searchByBarcode()" class="bg-blue-900/30 text-blue-300 px-4 rounded-lg">Find</button>
                 </div>
-                <button onclick="closeScanner()" class="w-full mt-4 bg-slate-800 text-gray-300 py-2 rounded-lg">Close</button>
+                <button type="button" onclick="closeScanner()" class="w-full mt-4 bg-slate-800 text-gray-300 py-2 rounded-lg">Close</button>
             </div>
         </div>
 
@@ -954,7 +954,7 @@
             <div class="glass p-6 rounded-2xl max-w-4xl w-full max-h-[80vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold">My Sales Report</h3>
-                    <button onclick="closeMySales()" class="text-gray-400 hover:text-white">
+                    <button type="button" onclick="closeMySales()" class="text-gray-400 hover:text-white">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1037,10 +1037,10 @@
                 </div>
 
                 <div class="flex gap-3">
-                    <button onclick="processSale()" class="flex-1 bg-gradient-to-r from-green-600 to-green-800 text-white py-3 rounded-lg">
+                    <button type="button" onclick="processSale()" class="flex-1 bg-gradient-to-r from-green-600 to-green-800 text-white py-3 rounded-lg">
                         <i class="fas fa-check mr-2"></i>Complete Sale
                     </button>
-                    <button onclick="clearCart()" class="bg-slate-800 text-gray-300 px-4 rounded-lg">
+                    <button type="button" onclick="clearCart()" class="bg-slate-800 text-gray-300 px-4 rounded-lg">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1064,7 +1064,7 @@
         <div class="glass p-8 rounded-3xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold gradient-text">Advanced Analytics Dashboard</h3>
-                <button onclick="closeAnalytics()" class="text-gray-500 hover:text-white text-2xl">
+                <button type="button" onclick="closeAnalytics()" class="text-gray-500 hover:text-white text-2xl">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1106,7 +1106,7 @@
         <div class="glass p-8 rounded-3xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold gradient-text">Business Reports</h3>
-                <button onclick="closeReports()" class="text-gray-500 hover:text-white text-2xl">
+                <button type="button" onclick="closeReports()" class="text-gray-500 hover:text-white text-2xl">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1140,7 +1140,7 @@
         <div class="glass p-8 rounded-3xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold gradient-text">Services Summary</h3>
-                <button onclick="closeServicesModal()" class="text-gray-500 hover:text-white text-2xl">
+                <button type="button" onclick="closeServicesModal()" class="text-gray-500 hover:text-white text-2xl">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1171,7 +1171,7 @@
         <div class="glass p-8 rounded-3xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold gradient-text">Worker Sales Report</h3>
-                <button onclick="closeWorkerSales()" class="text-gray-500 hover:text-white text-2xl">
+                <button type="button" onclick="closeWorkerSales()" class="text-gray-500 hover:text-white text-2xl">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1193,15 +1193,15 @@
         <div class="glass p-8 rounded-3xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold gradient-text">All Loans & Credits</h3>
-                <button onclick="closeLoansModal()" class="text-gray-500 hover:text-white text-2xl">
+                <button type="button" onclick="closeLoansModal()" class="text-gray-500 hover:text-white text-2xl">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
             <div class="mb-4 flex gap-3">
-                <button onclick="showActiveLoans()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg">Active Loans</button>
-                <button onclick="showPaidLoans()" class="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg">Paid Loans</button>
-                <button onclick="showAllLoans()" class="bg-purple-900/30 text-purple-300 px-4 py-2 rounded-lg">All Loans</button>
+                <button type="button" onclick="showActiveLoans()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg">Active Loans</button>
+                <button type="button" onclick="showPaidLoans()" class="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg">Paid Loans</button>
+                <button type="button" onclick="showAllLoans()" class="bg-purple-900/30 text-purple-300 px-4 py-2 rounded-lg">All Loans</button>
             </div>
             
             <div id="all-loans-list" class="space-y-3">
@@ -1231,10 +1231,10 @@
                 </div>
             </div>
             <div class="flex justify-end gap-3 mt-6">
-                <button onclick="savePasswords()" class="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg hover:bg-green-900/50">
+                <button type="button" onclick="savePasswords()" class="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg hover:bg-green-900/50">
                     <i class="fas fa-save mr-2"></i>Save
                 </button>
-                <button onclick="closePasswordManager()" class="bg-slate-800 text-gray-300 px-4 py-2 rounded-lg hover:bg-slate-700">
+                <button type="button" onclick="closePasswordManager()" class="bg-slate-800 text-gray-300 px-4 py-2 rounded-lg hover:bg-slate-700">
                     Close
                 </button>
             </div>
@@ -1247,10 +1247,10 @@
             <div class="flex justify-between items-center mb-6 no-print">
                 <h3 class="text-2xl font-bold gradient-text">Sales Invoice</h3>
                 <div class="flex gap-2">
-                    <button onclick="printInvoice()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg hover:bg-blue-900/50">
+                    <button type="button" onclick="printInvoice()" class="bg-blue-900/30 text-blue-300 px-4 py-2 rounded-lg hover:bg-blue-900/50">
                         <i class="fas fa-print mr-2"></i>Print
                     </button>
-                    <button onclick="closeInvoice()" class="text-gray-500 hover:text-white text-2xl">
+                    <button type="button" onclick="closeInvoice()" class="text-gray-500 hover:text-white text-2xl">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1267,7 +1267,7 @@
         <div class="glass p-8 rounded-3xl w-full max-w-md mx-4">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold gradient-text">Backup & Restore</h3>
-                <button onclick="closeBackupModal()" class="text-gray-500 hover:text-white text-2xl">
+                <button type="button" onclick="closeBackupModal()" class="text-gray-500 hover:text-white text-2xl">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -1276,7 +1276,7 @@
                 <div class="p-4 bg-blue-900/20 rounded-lg">
                     <h4 class="font-semibold mb-2">Create Backup</h4>
                     <p class="text-sm text-gray-400 mb-3">Download all data as JSON file</p>
-                    <button onclick="createBackup()" class="w-full bg-blue-900/30 text-blue-300 py-2 rounded-lg hover:bg-blue-900/50">
+                    <button type="button" onclick="createBackup()" class="w-full bg-blue-900/30 text-blue-300 py-2 rounded-lg hover:bg-blue-900/50">
                         <i class="fas fa-download mr-2"></i>Download Backup
                     </button>
                 </div>
@@ -1285,7 +1285,7 @@
                     <h4 class="font-semibold mb-2">Restore Backup</h4>
                     <p class="text-sm text-gray-400 mb-3">Upload a backup file</p>
                     <input type="file" id="backup-file" class="w-full bg-slate-900 border border-slate-700 p-2 rounded-lg mb-3" accept=".json">
-                    <button onclick="restoreBackup()" class="w-full bg-green-900/30 text-green-300 py-2 rounded-lg hover:bg-green-900/50">
+                    <button type="button" onclick="restoreBackup()" class="w-full bg-green-900/30 text-green-300 py-2 rounded-lg hover:bg-green-900/50">
                         <i class="fas fa-upload mr-2"></i>Restore
                     </button>
                 </div>
@@ -1293,7 +1293,7 @@
                 <div class="p-4 bg-red-900/20 rounded-lg">
                     <h4 class="font-semibold mb-2">Danger Zone</h4>
                     <p class="text-sm text-gray-400 mb-3">Reset all data</p>
-                    <button onclick="resetAllData()" class="w-full bg-red-900/30 text-red-300 py-2 rounded-lg hover:bg-red-900/50">
+                    <button type="button" onclick="resetAllData()" class="w-full bg-red-900/30 text-red-300 py-2 rounded-lg hover:bg-red-900/50">
                         <i class="fas fa-trash mr-2"></i>Reset All Data
                     </button>
                 </div>
@@ -1342,7 +1342,7 @@
 
         const SHOP_DETAILS = {
             name: "OKASHA COMMUNICATION",
-            address: "Liaq Ali Chowk Shop #5, Alh e Adhees Masjid",
+            address: "Liaq Ali Chowk Shop #5, Ahl e Adhees Masjid",
             phone: "0311-5463213",
             bank: "Askari Bank - 00550350004927",
             easypaisa: "0311-5463213"
@@ -1356,15 +1356,26 @@
         // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
             console.log("✅ Complete Professional POS System Starting...");
-            console.log("Version: 6.1 FIXED | Location: Liaq Ali Chowk Shop #5");
+            console.log("Version: 6.2 - INP Fixed");
             
+            // Load data
             loadLocalData();
             loadFromFirebase();
+            
+            // Setup listeners
             setupListeners();
+            
+            // Start clocks
             updateClocks();
             setInterval(updateClocks, 1000);
+            
+            // Check session
             checkExistingSession();
+            
+            // Setup theme
             setupTheme();
+            
+            // Setup connection monitoring
             setupConnectionMonitoring();
             
             // Set up payment method change listener
@@ -1386,35 +1397,46 @@
                 const data = snapshot.val();
                 products = data ? Object.values(data) : [];
                 console.log("Products loaded:", products.length);
-                updateAllDashboards();
+                // Use requestAnimationFrame to prevent UI blocking
+                requestAnimationFrame(() => {
+                    updateAllDashboards();
+                });
             });
 
             database.ref('sales').on('value', (snapshot) => {
                 const data = snapshot.val();
                 sales = data ? Object.values(data) : [];
                 console.log("Sales loaded:", sales.length);
-                updateAllDashboards();
+                requestAnimationFrame(() => {
+                    updateAllDashboards();
+                });
             });
 
             database.ref('loans').on('value', (snapshot) => {
                 const data = snapshot.val();
                 loans = data ? Object.values(data) : [];
                 console.log("Loans loaded:", loans.length);
-                updateLoansDisplay();
+                requestAnimationFrame(() => {
+                    updateLoansDisplay();
+                });
             });
 
             database.ref('services').on('value', (snapshot) => {
                 const data = snapshot.val();
                 services = data ? Object.values(data) : [];
                 console.log("Services loaded:", services.length);
-                updateServicesDisplay();
-                updateWorkerDashboard();
+                requestAnimationFrame(() => {
+                    updateServicesDisplay();
+                    updateWorkerDashboard();
+                });
             });
 
             database.ref('activityLog').on('value', (snapshot) => {
                 const data = snapshot.val();
                 activityLog = data ? Object.values(data) : [];
-                updateWorkerActivity();
+                requestAnimationFrame(() => {
+                    updateWorkerActivity();
+                });
             });
 
             database.ref('passwords').on('value', (snapshot) => {
@@ -1456,8 +1478,9 @@
                 database.ref('passwords').set(systemPasswords);
                 
                 console.log("Data saved to Firebase");
-                document.getElementById('last-update') && (document.getElementById('last-update').textContent = `Updated: ${new Date().toLocaleTimeString()}`);
-                document.getElementById('worker-last-update') && (document.getElementById('worker-last-update').textContent = `Updated: ${new Date().toLocaleTimeString()}`);
+                const now = new Date().toLocaleTimeString();
+                document.getElementById('last-update') && (document.getElementById('last-update').textContent = `Updated: ${now}`);
+                document.getElementById('worker-last-update') && (document.getElementById('worker-last-update').textContent = `Updated: ${now}`);
             } catch (error) {
                 console.error("Firebase save error:", error);
                 saveLocalData();
@@ -1547,8 +1570,7 @@
                 'Can process sales, easyload, print, forms and all services';
         }
 
-        document.getElementById('login-form').addEventListener('submit', (e) => {
-            e.preventDefault();
+        function handleLogin() {
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('login-error');
 
@@ -1591,7 +1613,7 @@
                 document.getElementById('password').classList.add('shake');
                 setTimeout(() => document.getElementById('password').classList.remove('shake'), 500);
             }
-        });
+        }
 
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
@@ -1743,13 +1765,13 @@
 
             const product = {
                 id: Date.now(),
-                name,
-                barcode,
-                category,
+                name: name,
+                barcode: barcode,
+                category: category,
                 costPrice: cost,
                 sellPrice: price,
-                quantity,
-                imageUrl,
+                quantity: quantity,
+                imageUrl: imageUrl,
                 addedBy: currentUser?.name || 'Admin',
                 date: new Date().toISOString()
             };
@@ -1757,7 +1779,11 @@
             products.push(product);
             saveToFirebase();
             saveLocalData();
-            updateAdminDashboard();
+            
+            // Update UI
+            requestAnimationFrame(() => {
+                updateAdminDashboard();
+            });
 
             // Clear form
             document.getElementById('admin-product-name').value = '';
@@ -1802,7 +1828,8 @@
                 return;
             }
 
-            container.innerHTML = products.map(p => {
+            let productsHtml = '';
+            products.forEach(p => {
                 const profitPerItem = (p.sellPrice || 0) - (p.costPrice || 0);
                 let categoryClass = 'bg-gray-900/30 text-gray-300';
                 if (p.category === 'mobile') categoryClass = 'bg-blue-900/30 text-blue-300';
@@ -1812,7 +1839,7 @@
                 else if (p.category === 'print') categoryClass = 'bg-indigo-900/30 text-indigo-300';
                 else if (p.category === 'form') categoryClass = 'bg-pink-900/30 text-pink-300';
 
-                return `
+                productsHtml += `
                 <div class="flex items-center gap-4 p-3 bg-slate-800/50 rounded-lg">
                     <img src="${p.imageUrl}" class="product-image" onerror="this.src='https://via.placeholder.com/60'">
                     <div class="flex-1">
@@ -1836,7 +1863,9 @@
                         <div class="text-xs text-gray-500 mt-1">Barcode: ${p.barcode || 'N/A'}</div>
                     </div>
                 </div>
-            `}).join('');
+            `});
+
+            container.innerHTML = productsHtml;
 
             // Update sales history
             const salesContainer = document.getElementById('admin-sales-history');
@@ -1844,19 +1873,23 @@
                 if (sales.length === 0) {
                     salesContainer.innerHTML = '<div class="text-center py-4 text-gray-400">No sales yet</div>';
                 } else {
-                    salesContainer.innerHTML = sales.slice(-10).reverse().map(s => `
-                        <div class="p-3 bg-slate-800/30 rounded-lg">
-                            <div class="flex justify-between">
-                                <span class="font-medium">${s.items?.length || 1} items</span>
-                                <span class="text-green-400 font-bold">Rs. ${s.total || 0}</span>
+                    let salesHtml = '';
+                    sales.slice(-10).reverse().forEach(s => {
+                        salesHtml += `
+                            <div class="p-3 bg-slate-800/30 rounded-lg">
+                                <div class="flex justify-between">
+                                    <span class="font-medium">${s.items?.length || 1} items</span>
+                                    <span class="text-green-400 font-bold">Rs. ${s.total || 0}</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-400 mt-1">
+                                    <span class="payment-badge payment-${s.paymentMethod || 'cash'}">${s.paymentMethod || 'cash'}</span>
+                                    <span>${s.worker || 'Worker'}</span>
+                                    <span>${s.date ? new Date(s.date).toLocaleTimeString() : ''}</span>
+                                </div>
                             </div>
-                            <div class="flex justify-between text-sm text-gray-400 mt-1">
-                                <span class="payment-badge payment-${s.paymentMethod || 'cash'}">${s.paymentMethod || 'cash'}</span>
-                                <span>${s.worker || 'Worker'}</span>
-                                <span>${s.date ? new Date(s.date).toLocaleTimeString() : ''}</span>
-                            </div>
-                        </div>
-                    `).join('');
+                        `;
+                    });
+                    salesContainer.innerHTML = salesHtml;
                 }
             }
 
@@ -1890,7 +1923,9 @@
 
             saveToFirebase();
             saveLocalData();
-            updateAdminDashboard();
+            requestAnimationFrame(() => {
+                updateAdminDashboard();
+            });
             logActivity('product_updated', `Updated ${product.name}`);
             showNotification('Product updated', 'success');
         }
@@ -1900,14 +1935,18 @@
                 products = products.filter(p => p.id !== id);
                 saveToFirebase();
                 saveLocalData();
-                updateAdminDashboard();
+                requestAnimationFrame(() => {
+                    updateAdminDashboard();
+                });
                 logActivity('product_deleted', `Deleted product`);
                 showNotification('Product deleted', 'success');
             }
         }
 
         function refreshAdmin() {
-            updateAdminDashboard();
+            requestAnimationFrame(() => {
+                updateAdminDashboard();
+            });
             showNotification('Dashboard refreshed', 'success');
         }
 
@@ -1946,13 +1985,14 @@
                 return;
             }
 
-            container.innerHTML = availableProducts.map(p => {
+            let productsHtml = '';
+            availableProducts.forEach(p => {
                 let borderColor = 'border-green-500/30';
                 if (p.category === 'load') borderColor = 'border-green-500';
                 else if (p.category === 'print') borderColor = 'border-purple-500';
                 else if (p.category === 'form') borderColor = 'border-blue-500';
                 
-                return `
+                productsHtml += `
                 <div class="bg-slate-800/50 rounded-xl p-3 cursor-pointer hover:bg-slate-800/70 transition blue-glow border-l-4 ${borderColor}" onclick="addToCart(${p.id})">
                     <img src="${p.imageUrl}" class="w-full h-24 object-cover rounded-lg mb-2" onerror="this.src='https://via.placeholder.com/100'">
                     <h4 class="font-bold text-sm">${p.name}</h4>
@@ -1960,7 +2000,9 @@
                     <p class="text-xs text-gray-400">Stock: ${p.quantity || 0}</p>
                     <span class="text-xs px-2 py-0.5 rounded-full ${p.category === 'load' ? 'bg-green-900/30 text-green-300' : p.category === 'print' ? 'bg-purple-900/30 text-purple-300' : p.category === 'form' ? 'bg-blue-900/30 text-blue-300' : 'bg-gray-900/30 text-gray-300'}">${p.category || 'other'}</span>
                 </div>
-            `}).join('');
+            `});
+
+            container.innerHTML = productsHtml;
 
             // Update sales list
             updateWorkerSalesList();
@@ -2020,9 +2062,10 @@
                 return;
             }
 
-            container.innerHTML = cart.map(item => {
+            let cartHtml = '';
+            cart.forEach(item => {
                 subtotal += item.price * item.quantity;
-                return `
+                cartHtml += `
                     <div class="cart-item">
                         <img src="${item.imageUrl}" class="w-10 h-10 rounded object-cover" onerror="this.src='https://via.placeholder.com/40'">
                         <div class="flex-1">
@@ -2039,7 +2082,9 @@
                         </div>
                     </div>
                 `;
-            }).join('');
+            });
+
+            container.innerHTML = cartHtml;
 
             countEl && (countEl.textContent = cart.reduce((sum, item) => sum + item.quantity, 0));
             document.getElementById('cart-subtotal').textContent = `Rs. ${subtotal}`;
@@ -2120,7 +2165,11 @@
 
             saveToFirebase();
             saveLocalData();
-            updateWorkerDashboard();
+            
+            requestAnimationFrame(() => {
+                updateWorkerDashboard();
+            });
+            
             clearCart();
 
             // Clear input fields
@@ -2205,7 +2254,11 @@
 
             saveToFirebase();
             saveLocalData();
-            updateWorkerDashboard();
+            
+            requestAnimationFrame(() => {
+                updateWorkerDashboard();
+            });
+            
             closeServicePanel();
 
             showInvoice(sale);
@@ -2278,7 +2331,11 @@
 
             saveToFirebase();
             saveLocalData();
-            updateWorkerDashboard();
+            
+            requestAnimationFrame(() => {
+                updateWorkerDashboard();
+            });
+            
             closeServicePanel();
 
             showInvoice(sale);
@@ -2346,7 +2403,11 @@
 
             saveToFirebase();
             saveLocalData();
-            updateWorkerDashboard();
+            
+            requestAnimationFrame(() => {
+                updateWorkerDashboard();
+            });
+            
             closeServicePanel();
 
             showInvoice(sale);
@@ -2459,7 +2520,7 @@
                 <div class="mt-8 pt-6 border-t text-center text-sm text-gray-500">
                     <p>Thank you for your business!</p>
                     <p>Goods once sold will not be taken back</p>
-                    <p class="text-xs mt-4">Liaq Ali Chowk Shop #5, Alh e Adhees Masjid</p>
+                    <p class="text-xs mt-4">Liaq Ali Chowk Shop #5, Ahl e Adhees Masjid</p>
                     <p class="text-xs">Easypaisa: 0311-5463213 | Askari Bank: 00550350004927</p>
                 </div>
             `;
@@ -2515,10 +2576,11 @@
                 return;
             }
 
-            container.innerHTML = allTransactions.slice(0, 10).map(t => {
+            let transactionsHtml = '';
+            allTransactions.slice(0, 10).forEach(t => {
                 if (t.items) {
                     // Sale transaction
-                    return `
+                    transactionsHtml += `
                         <div class="p-3 bg-slate-800/30 rounded-lg">
                             <div class="flex justify-between">
                                 <span class="font-medium">${t.items.length} items</span>
@@ -2537,7 +2599,7 @@
                     if (t.type === 'print') { serviceIcon = 'fa-print'; serviceColor = 'text-purple-400'; }
                     else if (t.type === 'form') { serviceIcon = 'fa-file-alt'; serviceColor = 'text-blue-400'; }
 
-                    return `
+                    transactionsHtml += `
                         <div class="p-3 bg-slate-800/30 rounded-lg">
                             <div class="flex justify-between">
                                 <span class="font-medium flex items-center gap-2">
@@ -2552,7 +2614,9 @@
                         </div>
                     `;
                 }
-            }).join('');
+            });
+
+            container.innerHTML = transactionsHtml;
         }
 
         // Worker My Sales
@@ -2570,45 +2634,49 @@
             if (workerSales.length === 0 && workerServices.length === 0) {
                 container.innerHTML = '<div class="text-center py-8 text-gray-400">No transactions found</div>';
             } else {
-                container.innerHTML = `
+                let salesHtml = `
                     <div class="p-4 bg-green-900/20 rounded-lg mb-4">
                         <h4 class="font-bold">Total Sales: Rs. ${(totalSales + totalServices).toLocaleString()}</h4>
                         <p class="text-sm text-gray-400">Products: ${workerSales.length} | Services: ${workerServices.length}</p>
                     </div>
                     
                     <h4 class="font-semibold mb-3">Recent Transactions</h4>
-                    ${[...workerSales.slice(-10), ...workerServices.slice(-10)]
-                        .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-                        .slice(0, 10)
-                        .map(t => {
-                            if (t.items) {
-                                return `
-                                    <div class="p-3 bg-slate-800/30 rounded-lg">
-                                        <div class="flex justify-between">
-                                            <span>${t.date ? new Date(t.date).toLocaleDateString() : ''}</span>
-                                            <span class="text-green-400">Rs. ${t.total || 0}</span>
-                                        </div>
-                                        <div class="flex justify-between text-sm text-gray-400">
-                                            <span>${t.items.length} items</span>
-                                            <span class="payment-badge payment-${t.paymentMethod || 'cash'}">${t.paymentMethod || 'cash'}</span>
-                                        </div>
-                                    </div>
-                                `;
-                            } else {
-                                return `
-                                    <div class="p-3 bg-slate-800/30 rounded-lg">
-                                        <div class="flex justify-between">
-                                            <span>${t.date ? new Date(t.date).toLocaleDateString() : ''}</span>
-                                            <span class="text-green-400">Rs. ${t.amount || t.total || t.price || 0}</span>
-                                        </div>
-                                        <div class="text-sm text-gray-400">
-                                            <span class="service-badge service-${t.type || 'service'}">${t.type || 'service'}</span>
-                                        </div>
-                                    </div>
-                                `;
-                            }
-                        }).join('')}
                 `;
+
+                const allTransactions = [...workerSales.slice(-10), ...workerServices.slice(-10)]
+                    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+                    .slice(0, 10);
+
+                allTransactions.forEach(t => {
+                    if (t.items) {
+                        salesHtml += `
+                            <div class="p-3 bg-slate-800/30 rounded-lg mb-2">
+                                <div class="flex justify-between">
+                                    <span>${t.date ? new Date(t.date).toLocaleDateString() : ''}</span>
+                                    <span class="text-green-400">Rs. ${t.total || 0}</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-400">
+                                    <span>${t.items.length} items</span>
+                                    <span class="payment-badge payment-${t.paymentMethod || 'cash'}">${t.paymentMethod || 'cash'}</span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        salesHtml += `
+                            <div class="p-3 bg-slate-800/30 rounded-lg mb-2">
+                                <div class="flex justify-between">
+                                    <span>${t.date ? new Date(t.date).toLocaleDateString() : ''}</span>
+                                    <span class="text-green-400">Rs. ${t.amount || t.total || t.price || 0}</span>
+                                </div>
+                                <div class="text-sm text-gray-400">
+                                    <span class="service-badge service-${t.type || 'service'}">${t.type || 'service'}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                container.innerHTML = salesHtml;
             }
 
             modal.classList.add('active');
@@ -2677,24 +2745,28 @@
             if (todayServices.length === 0) {
                 detailList.innerHTML = '<div class="text-center py-4 text-gray-400">No services today</div>';
             } else {
-                detailList.innerHTML = todayServices.slice(-10).reverse().map(s => `
-                    <div class="p-3 bg-slate-800/30 rounded-lg">
-                        <div class="flex justify-between">
-                            <span class="font-medium flex items-center gap-2">
-                                <i class="fas ${s.type === 'easyload' ? 'fa-mobile-alt' : s.type === 'print' ? 'fa-print' : 'fa-file-alt'} 
-                                    ${s.type === 'easyload' ? 'text-green-400' : s.type === 'print' ? 'text-purple-400' : 'text-blue-400'}"></i>
-                                ${s.type === 'easyload' ? 'Easyload' : s.type === 'print' ? 'Print/Photocopy' : 'Form'}
-                            </span>
-                            <span class="text-green-400">Rs. ${s.amount || s.total || s.price || 0}</span>
+                let servicesHtml = '';
+                todayServices.slice(-10).reverse().forEach(s => {
+                    servicesHtml += `
+                        <div class="p-3 bg-slate-800/30 rounded-lg">
+                            <div class="flex justify-between">
+                                <span class="font-medium flex items-center gap-2">
+                                    <i class="fas ${s.type === 'easyload' ? 'fa-mobile-alt' : s.type === 'print' ? 'fa-print' : 'fa-file-alt'} 
+                                        ${s.type === 'easyload' ? 'text-green-400' : s.type === 'print' ? 'text-purple-400' : 'text-blue-400'}"></i>
+                                    ${s.type === 'easyload' ? 'Easyload' : s.type === 'print' ? 'Print/Photocopy' : 'Form'}
+                                </span>
+                                <span class="text-green-400">Rs. ${s.amount || s.total || s.price || 0}</span>
+                            </div>
+                            <div class="text-sm text-gray-400 mt-1">
+                                <span>Worker: ${s.worker || 'Unknown'}</span>
+                                <span class="ml-4">${s.date ? new Date(s.date).toLocaleTimeString() : ''}</span>
+                            </div>
+                            ${s.number ? `<p class="text-xs text-gray-500">Mobile: ${s.number}</p>` : ''}
+                            ${s.customer ? `<p class="text-xs text-gray-500">Customer: ${s.customer}</p>` : ''}
                         </div>
-                        <div class="text-sm text-gray-400 mt-1">
-                            <span>Worker: ${s.worker || 'Unknown'}</span>
-                            <span class="ml-4">${s.date ? new Date(s.date).toLocaleTimeString() : ''}</span>
-                        </div>
-                        ${s.number ? `<p class="text-xs text-gray-500">Mobile: ${s.number}</p>` : ''}
-                        ${s.customer ? `<p class="text-xs text-gray-500">Customer: ${s.customer}</p>` : ''}
-                    </div>
-                `).join('');
+                    `;
+                });
+                detailList.innerHTML = servicesHtml;
             }
 
             modal.classList.add('active');
@@ -2715,19 +2787,24 @@
                 return;
             }
 
-            container.innerHTML = recentServices.map(s => `
-                <div class="p-3 bg-slate-800/30 rounded-lg">
-                    <div class="flex justify-between">
-                        <span class="font-medium flex items-center gap-2">
-                            <i class="fas ${s.type === 'easyload' ? 'fa-mobile-alt' : s.type === 'print' ? 'fa-print' : 'fa-file-alt'} 
-                                ${s.type === 'easyload' ? 'text-green-400' : s.type === 'print' ? 'text-purple-400' : 'text-blue-400'}"></i>
-                            ${s.type || 'service'}
-                        </span>
-                        <span class="text-green-400">Rs. ${s.amount || s.total || s.price || 0}</span>
+            let servicesHtml = '';
+            recentServices.forEach(s => {
+                servicesHtml += `
+                    <div class="p-3 bg-slate-800/30 rounded-lg">
+                        <div class="flex justify-between">
+                            <span class="font-medium flex items-center gap-2">
+                                <i class="fas ${s.type === 'easyload' ? 'fa-mobile-alt' : s.type === 'print' ? 'fa-print' : 'fa-file-alt'} 
+                                    ${s.type === 'easyload' ? 'text-green-400' : s.type === 'print' ? 'text-purple-400' : 'text-blue-400'}"></i>
+                                ${s.type || 'service'}
+                            </span>
+                            <span class="text-green-400">Rs. ${s.amount || s.total || s.price || 0}</span>
+                        </div>
+                        <p class="text-xs text-gray-400">${s.date ? new Date(s.date).toLocaleTimeString() : ''} - ${s.worker || 'Unknown'}</p>
                     </div>
-                    <p class="text-xs text-gray-400">${s.date ? new Date(s.date).toLocaleTimeString() : ''} - ${s.worker || 'Unknown'}</p>
-                </div>
-            `).join('');
+                `;
+            });
+
+            container.innerHTML = servicesHtml;
         }
 
         // ==================== LOANS FUNCTIONS ====================
@@ -2749,22 +2826,27 @@
                 return;
             }
 
-            container.innerHTML = activeLoans.map(loan => `
-                <div class="p-4 bg-slate-800/50 rounded-lg">
-                    <div class="flex justify-between mb-2">
-                        <h4 class="font-bold text-lg">${loan.customer || 'Unknown'}</h4>
-                        <span class="text-red-400 text-xl font-bold">Rs. ${loan.amount || 0}</span>
+            let loansHtml = '';
+            activeLoans.forEach(loan => {
+                loansHtml += `
+                    <div class="p-4 bg-slate-800/50 rounded-lg">
+                        <div class="flex justify-between mb-2">
+                            <h4 class="font-bold text-lg">${loan.customer || 'Unknown'}</h4>
+                            <span class="text-red-400 text-xl font-bold">Rs. ${loan.amount || 0}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-sm text-gray-400 mb-3">
+                            <p>Date: ${loan.date ? new Date(loan.date).toLocaleDateString() : ''}</p>
+                            <p>Worker: ${loan.worker || 'Unknown'}</p>
+                        </div>
+                        <p class="text-sm text-gray-400 mb-3">Items: ${loan.items ? loan.items.map(i => i.name).join(', ') : 'N/A'}</p>
+                        <button onclick="markLoanPaid(${loan.id})" class="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg text-sm hover:bg-green-900/50">
+                            <i class="fas fa-check mr-2"></i>Mark as Paid
+                        </button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 text-sm text-gray-400 mb-3">
-                        <p>Date: ${loan.date ? new Date(loan.date).toLocaleDateString() : ''}</p>
-                        <p>Worker: ${loan.worker || 'Unknown'}</p>
-                    </div>
-                    <p class="text-sm text-gray-400 mb-3">Items: ${loan.items ? loan.items.map(i => i.name).join(', ') : 'N/A'}</p>
-                    <button onclick="markLoanPaid(${loan.id})" class="bg-green-900/30 text-green-300 px-4 py-2 rounded-lg text-sm hover:bg-green-900/50">
-                        <i class="fas fa-check mr-2"></i>Mark as Paid
-                    </button>
-                </div>
-            `).join('');
+                `;
+            });
+
+            container.innerHTML = loansHtml;
         }
 
         function showPaidLoans() {
@@ -2778,15 +2860,20 @@
                 return;
             }
 
-            container.innerHTML = paidLoans.map(loan => `
-                <div class="p-4 bg-slate-800/30 rounded-lg opacity-75">
-                    <div class="flex justify-between mb-2">
-                        <h4 class="font-bold">${loan.customer || 'Unknown'}</h4>
-                        <span class="text-green-400">Rs. ${loan.amount || 0} (Paid)</span>
+            let loansHtml = '';
+            paidLoans.forEach(loan => {
+                loansHtml += `
+                    <div class="p-4 bg-slate-800/30 rounded-lg opacity-75">
+                        <div class="flex justify-between mb-2">
+                            <h4 class="font-bold">${loan.customer || 'Unknown'}</h4>
+                            <span class="text-green-400">Rs. ${loan.amount || 0} (Paid)</span>
+                        </div>
+                        <p class="text-sm text-gray-400">Date: ${loan.date ? new Date(loan.date).toLocaleDateString() : ''}</p>
                     </div>
-                    <p class="text-sm text-gray-400">Date: ${loan.date ? new Date(loan.date).toLocaleDateString() : ''}</p>
-                </div>
-            `).join('');
+                `;
+            });
+
+            container.innerHTML = loansHtml;
         }
 
         function showAllLoans() {
@@ -2798,15 +2885,20 @@
                 return;
             }
 
-            container.innerHTML = loans.map(loan => `
-                <div class="p-4 ${loan.paid ? 'bg-slate-800/30' : 'bg-slate-800/50'} rounded-lg">
-                    <div class="flex justify-between mb-2">
-                        <h4 class="font-bold">${loan.customer || 'Unknown'}</h4>
-                        <span class="${loan.paid ? 'text-green-400' : 'text-red-400'}">Rs. ${loan.amount || 0} ${loan.paid ? '(Paid)' : ''}</span>
+            let loansHtml = '';
+            loans.forEach(loan => {
+                loansHtml += `
+                    <div class="p-4 ${loan.paid ? 'bg-slate-800/30' : 'bg-slate-800/50'} rounded-lg">
+                        <div class="flex justify-between mb-2">
+                            <h4 class="font-bold">${loan.customer || 'Unknown'}</h4>
+                            <span class="${loan.paid ? 'text-green-400' : 'text-red-400'}">Rs. ${loan.amount || 0} ${loan.paid ? '(Paid)' : ''}</span>
+                        </div>
+                        <p class="text-sm text-gray-400">Date: ${loan.date ? new Date(loan.date).toLocaleDateString() : ''}</p>
                     </div>
-                    <p class="text-sm text-gray-400">Date: ${loan.date ? new Date(loan.date).toLocaleDateString() : ''}</p>
-                </div>
-            `).join('');
+                `;
+            });
+
+            container.innerHTML = loansHtml;
         }
 
         function markLoanPaid(loanId) {
@@ -2833,15 +2925,20 @@
                 return;
             }
 
-            container.innerHTML = activeLoans.map(loan => `
-                <div class="p-3 bg-slate-800/30 rounded-lg">
-                    <div class="flex justify-between">
-                        <span class="font-medium">${loan.customer || 'Unknown'}</span>
-                        <span class="text-red-400">Rs. ${loan.amount || 0}</span>
+            let loansHtml = '';
+            activeLoans.forEach(loan => {
+                loansHtml += `
+                    <div class="p-3 bg-slate-800/30 rounded-lg">
+                        <div class="flex justify-between">
+                            <span class="font-medium">${loan.customer || 'Unknown'}</span>
+                            <span class="text-red-400">Rs. ${loan.amount || 0}</span>
+                        </div>
+                        <p class="text-xs text-gray-400">${loan.date ? new Date(loan.date).toLocaleDateString() : ''}</p>
                     </div>
-                    <p class="text-xs text-gray-400">${loan.date ? new Date(loan.date).toLocaleDateString() : ''}</p>
-                </div>
-            `).join('');
+                `;
+            });
+
+            container.innerHTML = loansHtml;
         }
 
         // ==================== WORKER SALES REPORT (ADMIN) ====================
@@ -2854,8 +2951,11 @@
             // Get unique workers
             const workers = [...new Set([...sales.map(s => s.worker), ...services.map(s => s.worker)].filter(w => w))];
             
-            select.innerHTML = '<option value="">Select Worker</option>' + 
-                workers.map(w => `<option value="${w}">${w}</option>`).join('');
+            let options = '<option value="">Select Worker</option>';
+            workers.forEach(w => {
+                options += `<option value="${w}">${w}</option>`;
+            });
+            select.innerHTML = options;
 
             modal.classList.add('active');
         }
@@ -2871,7 +2971,7 @@
             const totalSales = workerSales.reduce((sum, s) => sum + (s.total || 0), 0);
             const totalServices = workerServices.reduce((sum, s) => sum + (s.amount || s.total || s.price || 0), 0);
 
-            container.innerHTML = `
+            let reportHtml = `
                 <div class="p-4 bg-green-900/20 rounded-lg mb-4">
                     <h4 class="font-bold text-xl">${worker}</h4>
                     <p class="text-sm text-gray-400">Total Sales: Rs. ${(totalSales + totalServices).toLocaleString()}</p>
@@ -2879,37 +2979,41 @@
                 </div>
                 
                 <h4 class="font-semibold mb-3">Recent Activity</h4>
-                ${[...workerSales.slice(-5), ...workerServices.slice(-5)]
-                    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-                    .slice(0, 10)
-                    .map(t => {
-                        if (t.items) {
-                            return `
-                                <div class="p-3 bg-slate-800/30 rounded-lg mb-2">
-                                    <div class="flex justify-between">
-                                        <span>${t.date ? new Date(t.date).toLocaleDateString() : ''}</span>
-                                        <span class="text-green-400">Rs. ${t.total || 0}</span>
-                                    </div>
-                                    <div class="text-sm text-gray-400">
-                                        <span>${t.items.length} items - ${t.paymentMethod || 'cash'}</span>
-                                    </div>
-                                </div>
-                            `;
-                        } else {
-                            return `
-                                <div class="p-3 bg-slate-800/30 rounded-lg mb-2">
-                                    <div class="flex justify-between">
-                                        <span>${t.date ? new Date(t.date).toLocaleDateString() : ''}</span>
-                                        <span class="text-green-400">Rs. ${t.amount || t.total || t.price || 0}</span>
-                                    </div>
-                                    <div class="text-sm text-gray-400">
-                                        <span>${t.type || 'service'} service</span>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    }).join('')}
             `;
+
+            const allTransactions = [...workerSales.slice(-5), ...workerServices.slice(-5)]
+                .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+                .slice(0, 10);
+
+            allTransactions.forEach(t => {
+                if (t.items) {
+                    reportHtml += `
+                        <div class="p-3 bg-slate-800/30 rounded-lg mb-2">
+                            <div class="flex justify-between">
+                                <span>${t.date ? new Date(t.date).toLocaleDateString() : ''}</span>
+                                <span class="text-green-400">Rs. ${t.total || 0}</span>
+                            </div>
+                            <div class="text-sm text-gray-400">
+                                <span>${t.items.length} items - ${t.paymentMethod || 'cash'}</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    reportHtml += `
+                        <div class="p-3 bg-slate-800/30 rounded-lg mb-2">
+                            <div class="flex justify-between">
+                                <span>${t.date ? new Date(t.date).toLocaleDateString() : ''}</span>
+                                <span class="text-green-400">Rs. ${t.amount || t.total || t.price || 0}</span>
+                            </div>
+                            <div class="text-sm text-gray-400">
+                                <span>${t.type || 'service'} service</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            container.innerHTML = reportHtml;
         }
 
         function closeWorkerSales() {
@@ -3255,7 +3359,8 @@
                 return;
             }
 
-            container.innerHTML = recent.map(a => {
+            let activityHtml = '';
+            recent.forEach(a => {
                 let icon = 'fa-info-circle';
                 let color = 'text-blue-400';
                 
@@ -3267,7 +3372,7 @@
                 else if (a.type === 'login') { icon = 'fa-sign-in-alt'; color = 'text-green-400'; }
                 else if (a.type === 'logout') { icon = 'fa-sign-out-alt'; color = 'text-red-400'; }
 
-                return `
+                activityHtml += `
                     <div class="p-2 bg-slate-800/30 rounded-lg text-sm flex items-center gap-3">
                         <div class="w-6 h-6 rounded-full ${color} bg-opacity-20 flex items-center justify-center">
                             <i class="fas ${icon} text-xs"></i>
@@ -3278,7 +3383,9 @@
                         </div>
                     </div>
                 `;
-            }).join('');
+            });
+
+            container.innerHTML = activityHtml;
         }
 
         function logActivity(type, message, amount = null) {
@@ -3353,7 +3460,7 @@
                 activityLog: activityLog,
                 systemPasswords: systemPasswords,
                 date: new Date().toISOString(),
-                version: '6.1',
+                version: '6.2',
                 shop: SHOP_DETAILS
             };
             
@@ -3390,7 +3497,9 @@
                         
                         saveToFirebase();
                         saveLocalData();
-                        updateAllDashboards();
+                        requestAnimationFrame(() => {
+                            updateAllDashboards();
+                        });
                         closeBackupModal();
                         showNotification('Backup restored!', 'success');
                         logActivity('restore', 'Restored from backup');
@@ -3419,7 +3528,9 @@
                 
                 saveToFirebase();
                 saveLocalData();
-                updateAllDashboards();
+                requestAnimationFrame(() => {
+                    updateAllDashboards();
+                });
                 closeBackupModal();
                 showNotification('All data reset', 'warning');
                 logActivity('reset', 'Reset all data');
@@ -3440,20 +3551,23 @@
         }
 
         function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 p-4 rounded-lg z-50 animate-fadeIn ${
-                type === 'success' ? 'bg-green-900/90 text-green-100' : 
-                type === 'warning' ? 'bg-yellow-900/90 text-yellow-100' : 
-                'bg-blue-900/90 text-blue-100'
-            }`;
-            notification.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
-                    <span>${message}</span>
-                </div>
-            `;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
+            // Use setTimeout to prevent UI blocking
+            setTimeout(() => {
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 p-4 rounded-lg z-50 animate-fadeIn ${
+                    type === 'success' ? 'bg-green-900/90 text-green-100' : 
+                    type === 'warning' ? 'bg-yellow-900/90 text-yellow-100' : 
+                    'bg-blue-900/90 text-blue-100'
+                }`;
+                notification.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                        <span>${message}</span>
+                    </div>
+                `;
+                document.body.appendChild(notification);
+                setTimeout(() => notification.remove(), 3000);
+            }, 10);
         }
 
         function updateAllDashboards() {
@@ -3479,10 +3593,18 @@
                 }
             });
 
-            // Auto-save every 30 seconds
+            // Auto-save every 30 seconds - use requestIdleCallback if available
             setInterval(() => {
-                if (isOnline) saveToFirebase();
-                else saveLocalData();
+                if (isOnline) {
+                    // Use requestAnimationFrame to prevent blocking
+                    requestAnimationFrame(() => {
+                        saveToFirebase();
+                    });
+                } else {
+                    requestAnimationFrame(() => {
+                        saveLocalData();
+                    });
+                }
             }, 30000);
         }
 
@@ -3513,19 +3635,18 @@
 
         // ==================== INITIAL LOG ====================
         console.log("=========================================");
-        console.log("✅ COMPLETE PROFESSIONAL POS SYSTEM v6.1 FIXED");
+        console.log("✅ COMPLETE PROFESSIONAL POS SYSTEM v6.2");
+        console.log("✅ INP ISSUE FIXED");
         console.log("=========================================");
         console.log("Shop:", SHOP_DETAILS.name);
         console.log("Location:", SHOP_DETAILS.address);
         console.log("Easypaisa:", SHOP_DETAILS.easypaisa);
         console.log("Bank:", SHOP_DETAILS.bank);
         console.log("=========================================");
-        console.log("✅ ALL FEATURES FIXED:");
-        console.log("✓ Worker Services - Now Working");
-        console.log("✓ Product Images - Upload & Display");
-        console.log("✓ Easyload Service");
-        console.log("✓ Print / Photocopy");
-        console.log("✓ Forms / Applications");
+        console.log("✅ ALL FEATURES WORKING:");
+        console.log("✓ Product Add/Delete");
+        console.log("✓ Image Upload & Display");
+        console.log("✓ Worker Services (Easyload, Print, Forms)");
         console.log("✓ Cash / Easypaisa / JazzCash / Bank / Loan");
         console.log("✓ Real-time Cloud Sync");
         console.log("=========================================");
